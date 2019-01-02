@@ -13,13 +13,16 @@ public class App {
         return "Hello world.";
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         System.out.println(new App().getGreeting());
 
-	Statement st = setupConn();
+	Statement nomDb = connectToNomDb();
+	Statement locaDb = createLocaDb();
 
-	completeDb(st);
+	transferGeoElements(nomDb, locaDb);
+	completeLocaDb(locaDb);
 
+      
 	List<double[]> area = new ArrayList<>();
 	area.add(new double[]{0, 0});
 	area.add(new double[]{10, 0});
@@ -27,15 +30,29 @@ public class App {
 	//area.add(new double[]{0, 0});
 	long popindex = 0;
 	
-	queryDb(st, area, popindex);
+	queryLocaDb(locaDb, area, popindex);
+
+	nomDb.close();
+	locaDb.close();
+    }
+
+    /**
+     * Insert Name, Rank, Shape, Main tag.
+     */
+    private static void transferGeoElements(Statement nomDb, Statement locaDb) throws SQLException {
+	ResultSet rs = nomDb.executeQuery("SELECT name,rank_search FROM placex");
+	while (rs.next()) {
+	    System.out.format("%s, %s\n", rs.getString(1), rs.getString(2));
+	}
+	rs.close();
     }
 
     /**
      * 1. Give elements popindex, index increasing with popularity.
-     * 2. Give elements a supercategory, Nature, Civilisation, Road.
-     * 3. Fix elements subcategory (=key OR value).
+     * 2. Give elements a supercategory: Nature, Civilisation, Road.
+     * 3. Main tag -> subcategory.
      */
-    private static void completeDb(Statement st) {
+    private static void completeLocaDb(Statement st) throws SQLException {
 	
     }
 
@@ -46,24 +63,32 @@ public class App {
      *
      * @return Geo-objects inside area.
      */
-    private static List<GeoObject> queryDb(Statement st, List<double[]> area, long popindex) {
-
+    private static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindex) throws SQLException {
+	
 	return null;
     }
 
-    private static Statement setupConn() {
+    private static Statement createLocaDb() throws SQLException {
+	String url = "jdbc:postgresql://localhost/";
+	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	Statement st = conn.createStatement();
+	
 	try {
-	    String url = "jdbc:postgresql://localhost/nominatim";
-	    Connection conn = DriverManager.getConnection(url, "martin", "pass");
-	    conn.setAutoCommit(false);
-	    Statement st = conn.createStatement();
-	    st.setFetchSize(50);
-	    return st;
-	}
-	catch (SQLException e) {
-	    e.printStackTrace();
-	    System.exit(1);
-	    return null;
-	}	
+	    st.executeUpdate("DROP DATABASE loca");
+	} catch (Exception e) {}
+	st.executeUpdate("CREATE DATABASE loca");
+
+	conn.setAutoCommit(false);
+	st.setFetchSize(50);
+	return st;
+    }
+
+    private static Statement connectToNomDb() throws SQLException {
+	String url = "jdbc:postgresql://localhost/nominatim";
+	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	conn.setAutoCommit(false);
+	Statement st = conn.createStatement();
+	st.setFetchSize(50);
+	return st;	
     }
 }
