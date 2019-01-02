@@ -3,6 +3,10 @@
  */
 package Loca_db_construction;
 
+import java.sql.*;
+import java.util.List;
+import java.util.ArrayList;
+
 public class App {
 
     public String getGreeting() {
@@ -11,5 +15,55 @@ public class App {
 
     public static void main(String[] args) {
         System.out.println(new App().getGreeting());
+
+	Statement st = setupConn();
+
+	completeDb(st);
+
+	List<double[]> area = new ArrayList<>();
+	area.add(new double[]{0, 0});
+	area.add(new double[]{10, 0});
+	area.add(new double[]{10, 10});
+	//area.add(new double[]{0, 0});
+	long popindex = 0;
+	
+	queryDb(st, area, popindex);
+    }
+
+    /**
+     * 1. Give elements popindex, index increasing with popularity.
+     * 2. Give elements a supercategory, Nature, Civilisation, Road.
+     * 3. Fix elements subcategory (=key OR value).
+     */
+    private static void completeDb(Statement st) {
+	
+    }
+
+    /**
+     * @param area Return elements in this area.
+     * @param popindex Return elements with popindex larger than this.
+     * @param count Number of elements to return.
+     *
+     * @return Geo-objects inside area.
+     */
+    private static List<GeoObject> queryDb(Statement st, List<double[]> area, long popindex) {
+
+	return null;
+    }
+
+    private static Statement setupConn() {
+	try {
+	    String url = "jdbc:postgresql://localhost/nominatim";
+	    Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	    conn.setAutoCommit(false);
+	    Statement st = conn.createStatement();
+	    st.setFetchSize(50);
+	    return st;
+	}
+	catch (SQLException e) {
+	    e.printStackTrace();
+	    System.exit(1);
+	    return null;
+	}	
     }
 }

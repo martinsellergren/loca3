@@ -6,8 +6,6 @@ package Loca_db_construction;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import java.sql.*;
-
 public class AppTest {
     @Test public void testAppHasAGreeting() {
         App classUnderTest = new App();
@@ -18,6 +16,7 @@ public class AppTest {
 
     @Test
     public void generalDb() {
+		
         String url = "jdbc:postgresql://localhost/test";
 
     }
