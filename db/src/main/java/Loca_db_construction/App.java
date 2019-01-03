@@ -6,6 +6,7 @@ package Loca_db_construction;
 import java.sql.*;
 import java.util.List;
 import java.util.ArrayList;
+import org.postgis.*;
 
 public class App {
 
@@ -16,25 +17,31 @@ public class App {
     public static void main(String[] args) throws SQLException {
         System.out.println(new App().getGreeting());
 
-	Statement nomDb = connectToNomDb();	
-	Statement locaDb = createLocaDb();
-	transferGeoElements(nomDb, locaDb);
-      
-	List<double[]> area = new ArrayList<>();
-	area.add(new double[]{0, 0});
-	area.add(new double[]{10, 0});
-	area.add(new double[]{10, 10});
-	//area.add(new double[]{0, 0});
-	long popindex = 0;
+	Statement nomDb = connectToNomDb();
+	testGeom(nomDb);
 	
-	queryLocaDb(locaDb, area, popindex);
+	// Statement locaDb = createLocaDb();
+	// transferGeoElements(nomDb, locaDb);
+	// dedupeRoads(locaDb);
+      
+	// List<double[]> area = new ArrayList<>();
+	// area.add(new double[]{0, 0});
+	// area.add(new double[]{10, 0});
+	// area.add(new double[]{10, 10});
+	// //area.add(new double[]{0, 0});
+	// long popindex = 0;
+	
+	// queryLocaDb(locaDb, area, popindex);
 
-	nomDb.close();
-	locaDb.close();
+	// locaDb.close();
+	// nomDb.close();
     }
 
     /**
-     * Insert: popindex(increasing with popularity), name, super-category(Nature/Civilization/Road), sub-category, shape
+     * Insert: 
+     * - popindex: increasing with popularity)
+     * - super-category: Nature/Civilization/Road
+     * ...
      */
     private static void transferGeoElements(Statement nomDb, Statement locaDb) throws SQLException {
 	locaDb.executeUpdate("CREATE TABLE elems (" +
@@ -43,21 +50,33 @@ public class App {
 			     "supercat TEXT not null, " +
 			     "subcat TEXT not null, " +
 			     "shape TEXT not null, " +
+			     "osm_id TEXT unique not null, " +
 			     "PRIMARY KEY ( popindex ))");
 	
 	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
-	ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry FROM placex ORDER BY rank_search");
+	ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry,osm_type,osm_id FROM placex ORDER BY rank_search");
+	long popindex = 0;
 
-	for (long popindex = 0; rs.next(); popindex++) {
-	    String name = "name...";//rs.getString(1);
+	while (rs.next()) {
+	    String name = rs.getString(1);
+	    if (name == null) continue;
+	    popindex += 1;
 	    String subcat = subcat(rs.getString(2), rs.getString(3));
 	    String supercat = supercat(subcat);
-	    String shape = "shape...";//rs.getString(4);
+	    String shape = rs.getString(4);
+	    String osmId = rs.getString(5) + ":" + rs.getString(6);
  
-	    String sql = String.format("INSERT INTO elems VALUES (%s, '%s', '%s', '%s', '%s')", popindex, name, supercat, subcat, shape);
+	    String sql = String.format("INSERT INTO elems VALUES " +
+				       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
+				       "ON CONFLICT (osm_id) DO NOTHING",
+				       popindex, name, supercat, subcat, shape, osmId);
 	    locaDb.executeUpdate(sql);
 	}
 	rs.close();
+    }
+
+    private static void dedupeRoads(Statement locaDb) {
+	// TODO
     }
 
     private static String subcat(String key, String value) {
@@ -84,6 +103,7 @@ public class App {
     private static Statement createLocaDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	//((org.postgresql.PGConnection)conn).addDataType("geometry", Class.forName("org.postgis.PGgeometry"));
 	Statement st = conn.createStatement();
 	
 	try {
@@ -98,9 +118,27 @@ public class App {
     private static Statement connectToNomDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	//((org.postgresql.PGConnection)conn).addDataType("geometry", Class.forName("org.postgis.PGgeometry"));
+	//((org.postgresql.PGConnection)conn).addDataType("box3d", Class.forName("org.postgis.PGbox3d"));
+	
 	conn.setAutoCommit(false);
 	Statement st = conn.createStatement();
 	st.setFetchSize(50);
 	return st;	
+    }
+
+    private static void testGeom(Statement st) throws SQLException {
+	ResultSet r = st.executeQuery("SELECT geometry,name FROM placex");
+
+	while(r.next()) {
+	    /*
+	     * Retrieve the geometry as an object then cast it to the geometry type.
+	     * Print things out.
+	     */
+	    PGgeometry geom = (PGgeometry)r.getObject(1);
+	    String name = r.getString(2);
+	    System.out.println(name + ". " + geom);
+	}
+	st.close();	
     }
 }

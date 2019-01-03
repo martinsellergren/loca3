@@ -24,6 +24,7 @@ dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     implementation 'com.google.guava:guava:26.0-jre'
     implementation 'org.postgresql:postgresql:42.2.5.jre7'
+    implementation 'net.postgis:postgis-jdbc:2.3.0'
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
