@@ -16,12 +16,9 @@ public class App {
     public static void main(String[] args) throws SQLException {
         System.out.println(new App().getGreeting());
 
-	Statement nomDb = connectToNomDb();
+	Statement nomDb = connectToNomDb();	
 	Statement locaDb = createLocaDb();
-
 	transferGeoElements(nomDb, locaDb);
-	completeLocaDb(locaDb);
-
       
 	List<double[]> area = new ArrayList<>();
 	area.add(new double[]{0, 0});
@@ -37,23 +34,39 @@ public class App {
     }
 
     /**
-     * Insert Name, Rank, Shape, Main tag.
+     * Insert: popindex(increasing with popularity), name, super-category(Nature/Civilization/Road), sub-category, shape
      */
     private static void transferGeoElements(Statement nomDb, Statement locaDb) throws SQLException {
-	ResultSet rs = nomDb.executeQuery("SELECT name,rank_search FROM placex");
-	while (rs.next()) {
-	    System.out.format("%s, %s\n", rs.getString(1), rs.getString(2));
+	locaDb.executeUpdate("CREATE TABLE elems (" +
+			     "popindex BIGINT not null, " +
+			     "name TEXT not null, " +
+			     "supercat TEXT not null, " +
+			     "subcat TEXT not null, " +
+			     "shape TEXT not null, " +
+			     "PRIMARY KEY ( popindex ))");
+	
+	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
+	ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry FROM placex ORDER BY rank_search");
+
+	for (long popindex = 0; rs.next(); popindex++) {
+	    String name = "name...";//rs.getString(1);
+	    String subcat = subcat(rs.getString(2), rs.getString(3));
+	    String supercat = supercat(subcat);
+	    String shape = "shape...";//rs.getString(4);
+ 
+	    String sql = String.format("INSERT INTO elems VALUES (%s, '%s', '%s', '%s', '%s')", popindex, name, supercat, subcat, shape);
+	    locaDb.executeUpdate(sql);
 	}
 	rs.close();
     }
 
-    /**
-     * 1. Give elements popindex, index increasing with popularity.
-     * 2. Give elements a supercategory: Nature, Civilisation, Road.
-     * 3. Main tag -> subcategory.
-     */
-    private static void completeLocaDb(Statement st) throws SQLException {
-	
+    private static String subcat(String key, String value) {
+	//return (value.equalsIgnoreCase("yes") ? key : value);
+	return key + " : " + value;
+    }
+
+    private static String supercat(String subcat) {
+	return "Civilization";
     }
 
     /**
@@ -63,7 +76,7 @@ public class App {
      *
      * @return Geo-objects inside area.
      */
-    private static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindex) throws SQLException {
+    public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindex) throws SQLException {
 	
 	return null;
     }
@@ -78,9 +91,8 @@ public class App {
 	} catch (Exception e) {}
 	st.executeUpdate("CREATE DATABASE loca");
 
-	conn.setAutoCommit(false);
-	st.setFetchSize(50);
-	return st;
+	conn = DriverManager.getConnection(url + "loca", "martin", "pass");
+	return conn.createStatement();
     }
 
     private static Statement connectToNomDb() throws SQLException {
