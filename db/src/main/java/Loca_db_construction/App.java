@@ -18,23 +18,24 @@ public class App {
         System.out.println(new App().getGreeting());
 
 	Statement nomDb = connectToNomDb();
-	testGeom(nomDb);
+	//testGeom(nomDb, "placex");
 	
-	// Statement locaDb = createLocaDb();
-	// transferGeoElements(nomDb, locaDb);
-	// dedupeRoads(locaDb);
+	Statement locaDb = createLocaDb();
+	transferGeoElements(nomDb, locaDb);
+	dedupeRoads(locaDb);
+	//testGeom(locaDb, "elems");
       
-	// List<double[]> area = new ArrayList<>();
-	// area.add(new double[]{0, 0});
-	// area.add(new double[]{10, 0});
-	// area.add(new double[]{10, 10});
-	// //area.add(new double[]{0, 0});
-	// long popindex = 0;
+	List<double[]> area = new ArrayList<>();
+	area.add(new double[]{0, 0});
+	area.add(new double[]{10, 0});
+	area.add(new double[]{10, 10});
+	//area.add(new double[]{0, 0});
+	long popindex = 0;
 	
-	// queryLocaDb(locaDb, area, popindex);
+	queryLocaDb(locaDb, area, popindex);
 
-	// locaDb.close();
-	// nomDb.close();
+	locaDb.close();
+	nomDb.close();
     }
 
     /**
@@ -45,13 +46,12 @@ public class App {
      */
     private static void transferGeoElements(Statement nomDb, Statement locaDb) throws SQLException {
 	locaDb.executeUpdate("CREATE TABLE elems (" +
-			     "popindex BIGINT not null, " +
-			     "name TEXT not null, " +
-			     "supercat TEXT not null, " +
-			     "subcat TEXT not null, " +
-			     "shape TEXT not null, " +
-			     "osm_id TEXT unique not null, " +
-			     "PRIMARY KEY ( popindex ))");
+			     "popindex BIGINT PRIMARY KEY, " +
+			     "name TEXT NOT NULL, " +
+			     "supercat TEXT NOT NULL, " +
+			     "subcat TEXT NOT NULL, " +
+			     "geometry geometry(Geometry,4326) NOT NULL, " +
+			     "osm_id TEXT UNIQUE NOT NULL)");
 	
 	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
 	ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry,osm_type,osm_id FROM placex ORDER BY rank_search");
@@ -63,7 +63,7 @@ public class App {
 	    popindex += 1;
 	    String subcat = subcat(rs.getString(2), rs.getString(3));
 	    String supercat = supercat(subcat);
-	    String shape = rs.getString(4);
+	    PGgeometry shape = (PGgeometry)rs.getObject(4);
 	    String osmId = rs.getString(5) + ":" + rs.getString(6);
  
 	    String sql = String.format("INSERT INTO elems VALUES " +
@@ -103,7 +103,6 @@ public class App {
     private static Statement createLocaDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
-	//((org.postgresql.PGConnection)conn).addDataType("geometry", Class.forName("org.postgis.PGgeometry"));
 	Statement st = conn.createStatement();
 	
 	try {
@@ -112,13 +111,21 @@ public class App {
 	st.executeUpdate("CREATE DATABASE loca");
 
 	conn = DriverManager.getConnection(url + "loca", "martin", "pass");
-	return conn.createStatement();
+	return createPostgisStatement(conn);
+    }
+
+    private static Statement createPostgisStatement(Connection conn) throws SQLException {
+	Statement st = conn.createStatement();
+	((org.postgresql.PGConnection)conn).addDataType("geometry", "org.postgis.PGgeometry");
+	st = conn.createStatement();
+	st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
+	return st;
     }
 
     private static Statement connectToNomDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
-	//((org.postgresql.PGConnection)conn).addDataType("geometry", Class.forName("org.postgis.PGgeometry"));
+	//((org.postgresql.PGConnection)conn).addDataType("geometry",Class.forName("org.postgis.PGgeometry"));
 	//((org.postgresql.PGConnection)conn).addDataType("box3d", Class.forName("org.postgis.PGbox3d"));
 	
 	conn.setAutoCommit(false);
@@ -127,8 +134,8 @@ public class App {
 	return st;	
     }
 
-    private static void testGeom(Statement st) throws SQLException {
-	ResultSet r = st.executeQuery("SELECT geometry,name FROM placex");
+    private static void testGeom(Statement st, String table) throws SQLException {
+	ResultSet r = st.executeQuery("SELECT geometry,name FROM " + table);
 
 	while(r.next()) {
 	    /*
