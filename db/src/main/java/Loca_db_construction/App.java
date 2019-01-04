@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.ArrayList;
 import org.postgis.*;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class App {
 
     public String getGreeting() {
@@ -26,11 +29,12 @@ public class App {
 	//testGeom(locaDb, "elems");
       
 	List<double[]> area = new ArrayList<>();
-	area.add(new double[]{0, 0});
-	area.add(new double[]{10, 0});
-	area.add(new double[]{10, 10});
-	//area.add(new double[]{0, 0});
-	long popindex = 0;
+	area.add(new double[]{-12.4993515, -37.4106643});
+	area.add(new double[]{-12.5110245, -37.4398378});
+	area.add(new double[]{-12.4567795, -37.4376570});
+	area.add(new double[]{-12.4545479, -37.3966189});
+	area.add(new double[]{-12.4993515, -37.4106643});
+	long popindex = 100;
 	
 	queryLocaDb(locaDb, area, popindex);
 
@@ -59,8 +63,7 @@ public class App {
 
 	while (rs.next()) {
 	    String name = rs.getString(1);
-	    if (name == null) continue;
-	    popindex += 1;
+	    if (!okName(name)) continue;
 	    String subcat = subcat(rs.getString(2), rs.getString(3));
 	    String supercat = supercat(subcat);
 	    PGgeometry shape = (PGgeometry)rs.getObject(4);
@@ -69,10 +72,15 @@ public class App {
 	    String sql = String.format("INSERT INTO elems VALUES " +
 				       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
 				       "ON CONFLICT (osm_id) DO NOTHING",
-				       popindex, name, supercat, subcat, shape, osmId);
+				       popindex++, name, supercat, subcat, shape, osmId);
 	    locaDb.executeUpdate(sql);
 	}
 	rs.close();
+    }
+
+    private static boolean okName(String name) {
+	return name != null && name.contains("\"name\"=>");
+	
     }
 
     private static void dedupeRoads(Statement locaDb) {
@@ -81,7 +89,7 @@ public class App {
 
     private static String subcat(String key, String value) {
 	//return (value.equalsIgnoreCase("yes") ? key : value);
-	return key + " : " + value;
+	return key + ":" + value;
     }
 
     private static String supercat(String subcat) {
@@ -90,14 +98,63 @@ public class App {
 
     /**
      * @param area Return elements in this area.
-     * @param popindex Return elements with popindex larger than this.
+     * @param popindexLimit Return elements with popindex larger than this.
      * @param count Number of elements to return.
      *
-     * @return Geo-objects inside area.
+     * @return Geo-objects inside area, [lon lat]
      */
-    public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindex) throws SQLException {
-	
+    public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindexLimit) throws SQLException {
+	String sql = String.format("SELECT * FROM elems WHERE ST_Intersects(geometry, 'SRID=4326;%s') AND popindex > %s",
+				   polystr(area), popindexLimit);
+	ResultSet rs = st.executeQuery(sql);
+
+	while (rs.next()) {
+	    long popindex = rs.getLong(1);
+	    String name = rs.getString(2);
+	    String supercat = rs.getString(3);
+	    String subcat = rs.getString(4);
+	    PGgeometry shape = (PGgeometry)rs.getObject(5);
+	    String osmId = rs.getString(6);
+
+	    System.out.printf("%s. %s. %s. %s. %s\n",
+			      popindex, defaultName(name), supercat, subcat, webAddress(osmId));
+	}
+				   
 	return null;
+    }
+
+    /**
+     * @param ns [lon lat]
+     * @return "POLYGON((lon lat,lon lat,lon lat,...))"
+     */
+    private static String polystr(List<double[]> ns) {
+	StringBuilder sb = new StringBuilder();
+
+	for (double[] n : ns) {
+	    sb.append(String.format("%s %s,", n[0], n[1]));
+	}
+
+	String str = sb.toString();
+	return "POLYGON((" + str.substring(0, str.length()-1) + "))";
+    }
+
+    /**
+     * @param name Name-data, multiple names from different countries.
+     */
+    private static String defaultName(String name) {
+	String regex = "\"name\"=>\"(.*?)\"";
+	Pattern p = Pattern.compile(regex);
+	Matcher m = p.matcher(name);
+
+	if (!m.find()) throw new RuntimeException("No default name:\n" + name);
+	return m.group(1);
+    }
+
+    private static String webAddress(String osmId) {
+	String type = osmId.split(":")[0];
+	String id = osmId.split(":")[1];
+	type = type.equals("N") ? "node" : (type.equals("W") ? "way" : "relation");
+	return String.format("https://www.openstreetmap.org/%s/%s", type, id);
     }
 
     private static Statement createLocaDb() throws SQLException {
@@ -111,22 +168,15 @@ public class App {
 	st.executeUpdate("CREATE DATABASE loca");
 
 	conn = DriverManager.getConnection(url + "loca", "martin", "pass");
-	return createPostgisStatement(conn);
-    }
-
-    private static Statement createPostgisStatement(Connection conn) throws SQLException {
-	Statement st = conn.createStatement();
-	((org.postgresql.PGConnection)conn).addDataType("geometry", "org.postgis.PGgeometry");
+	//((org.postgresql.PGConnection)conn).addDataType("geometry", "org.postgis.PGgeometry");
 	st = conn.createStatement();
-	st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
-	return st;
+	st.execute("CREATE EXTENSION postgis");
+	return st;	
     }
 
     private static Statement connectToNomDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
-	//((org.postgresql.PGConnection)conn).addDataType("geometry",Class.forName("org.postgis.PGgeometry"));
-	//((org.postgresql.PGConnection)conn).addDataType("box3d", Class.forName("org.postgis.PGbox3d"));
 	
 	conn.setAutoCommit(false);
 	Statement st = conn.createStatement();

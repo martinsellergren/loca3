@@ -1,0 +1,18 @@
+:compileJava
+:processResources NO-SOURCE
+:classes
+:run
+Hello world.
+101. The Ponds. Civilization. place:locality. https://www.openstreetmap.org/node/4684988041
+104. Sehan rocks. Civilization. place:locality. https://www.openstreetmap.org/node/4684997399
+106. West Landing. Civilization. place:locality. https://www.openstreetmap.org/node/4684997398
+107. Huts. Civilization. place:locality. https://www.openstreetmap.org/node/4684997397
+110. Alex or Middle Island. Civilization. place:locality. https://www.openstreetmap.org/node/4715951202
+163. Pequena Poit. Civilization. place:locality. https://www.openstreetmap.org/node/4684997396
+226. The Trail. Civilization. highway:path. https://www.openstreetmap.org/way/474579145
+312. British Overseas Territories. Civilization. boundary:administrative. https://www.openstreetmap.org/relation/3969434
+333. Ned's cave. Civilization. natural:cave_entrance. https://www.openstreetmap.org/node/4684997400
+
+BUILD SUCCESSFUL
+
+Total time: 2.732 secs
