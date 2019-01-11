@@ -22,12 +22,12 @@ public class App {
 
 	Statement nomDb = connectToNomDb();
 	//testGeom(nomDb, "placex");
-	
+
 	Statement locaDb = createLocaDb();
 	transferGeoElements(nomDb, locaDb);
 	dedupeRoads(locaDb);
 	//testGeom(locaDb, "elems");
-      
+
 	List<double[]> area = new ArrayList<>();
 	area.add(new double[]{-12.4993515, -37.4106643});
 	area.add(new double[]{-12.5110245, -37.4398378});
@@ -35,7 +35,7 @@ public class App {
 	area.add(new double[]{-12.4545479, -37.3966189});
 	area.add(new double[]{-12.4993515, -37.4106643});
 	long popindex = 100;
-	
+
 	queryLocaDb(locaDb, area, popindex);
 
 	locaDb.close();
@@ -43,7 +43,7 @@ public class App {
     }
 
     /**
-     * Insert: 
+     * Insert:
      * - popindex: increasing with popularity)
      * - super-category: Nature/Civilization/Road
      * ...
@@ -56,7 +56,7 @@ public class App {
 			     "subcat TEXT NOT NULL, " +
 			     "geometry geometry(Geometry,4326) NOT NULL, " +
 			     "osm_id TEXT UNIQUE NOT NULL)");
-	
+
 	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
 	ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry,osm_type,osm_id FROM placex ORDER BY rank_search");
 	long popindex = 0;
@@ -68,7 +68,7 @@ public class App {
 	    String supercat = supercat(subcat);
 	    PGgeometry shape = (PGgeometry)rs.getObject(4);
 	    String osmId = rs.getString(5) + ":" + rs.getString(6);
- 
+
 	    String sql = String.format("INSERT INTO elems VALUES " +
 				       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
 				       "ON CONFLICT (osm_id) DO NOTHING",
@@ -80,7 +80,7 @@ public class App {
 
     private static boolean okName(String name) {
 	return name != null && name.contains("\"name\"=>");
-	
+
     }
 
     private static void dedupeRoads(Statement locaDb) {
@@ -119,7 +119,7 @@ public class App {
 	    System.out.printf("%s. %s. %s. %s. %s\n",
 			      popindex, defaultName(name), supercat, subcat, webAddress(osmId));
 	}
-				   
+
 	return null;
     }
 
@@ -159,29 +159,28 @@ public class App {
 
     private static Statement createLocaDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/";
-	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	Connection conn = DriverManager.getConnection(url + "nominatim", "martin", "pass");
 	Statement st = conn.createStatement();
-	
-	try {
-	    st.executeUpdate("DROP DATABASE loca");
-	} catch (Exception e) {}
-	st.executeUpdate("CREATE DATABASE loca");
+        st.execute("DROP DATABASE IF EXISTS loca");
+	st.execute("CREATE DATABASE loca");
+        st.close();
+        conn.close();
 
 	conn = DriverManager.getConnection(url + "loca", "martin", "pass");
 	//((org.postgresql.PGConnection)conn).addDataType("geometry", "org.postgis.PGgeometry");
 	st = conn.createStatement();
 	st.execute("CREATE EXTENSION postgis");
-	return st;	
+	return st;
     }
 
     private static Statement connectToNomDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
-	
+
 	conn.setAutoCommit(false);
 	Statement st = conn.createStatement();
 	st.setFetchSize(50);
-	return st;	
+	return st;
     }
 
     private static void testGeom(Statement st, String table) throws SQLException {
@@ -196,6 +195,6 @@ public class App {
 	    String name = r.getString(2);
 	    System.out.println(name + ". " + geom);
 	}
-	st.close();	
+	st.close();
     }
 }
