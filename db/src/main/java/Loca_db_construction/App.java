@@ -7,11 +7,18 @@ import java.sql.*;
 import java.util.List;
 import java.util.ArrayList;
 import org.postgis.*;
+import java.nio.file.Files;
+import java.nio.charset.Charset;
+import java.nio.file.Paths;
+import java.io.IOException;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class App {
+
+    // 0en 2sv 3sp
+    public static final int LANGUAGE = 0;
 
     public String getGreeting() {
         return "Hello world.";
@@ -59,12 +66,13 @@ public class App {
 
 	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
 	ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry,osm_type,osm_id FROM placex ORDER BY rank_search");
+        List<String> tagsSpec = loadTagsSpec();
 	long popindex = 0;
 
 	while (rs.next()) {
 	    String name = rs.getString(1);
 	    if (!okName(name)) continue;
-	    String subcat = subcat(rs.getString(2), rs.getString(3));
+	    String subcat = subcat(rs.getString(2), rs.getString(3), tagsSpec);
 	    String supercat = supercat(subcat);
 	    PGgeometry shape = (PGgeometry)rs.getObject(4);
 	    String osmId = rs.getString(5) + ":" + rs.getString(6);
@@ -78,6 +86,18 @@ public class App {
 	rs.close();
     }
 
+    private static List<String> loadTagsSpec() {
+        try {
+            Charset charset = Charset.forName("UTF-8");
+            return Files.readAllLines(Paths.get("/home/martin/loca3/loca3/tags-spec/tags-spec-raw"), charset);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            System.exit(-1);
+            return null;
+        }
+    }
+
     private static boolean okName(String name) {
 	return name != null && name.contains("\"name\"=>");
 
@@ -87,9 +107,26 @@ public class App {
 	// TODO
     }
 
-    private static String subcat(String key, String value) {
+    private static String subcat(String key, String value, List<String> tagsSpec) {
 	//return (value.equalsIgnoreCase("yes") ? key : value);
-	return key + ":" + value;
+
+        for (String line : tagsSpec) {
+            //System.out.println(line);
+            String[] parts = line.split("\\|");
+            String key2 = parts[0];
+            String value2 = parts[1];
+            String subcat = parts[2 + LANGUAGE];
+
+            if ((key.equalsIgnoreCase(key2) && value.equalsIgnoreCase(value2)) ||
+                (key.equalsIgnoreCase(key2) && value2.equals("-"))) {
+
+                //System.out.printf("%s, %s, %s\n", key, value, subcat);
+                return subcat;
+            }
+        }
+
+        System.out.printf("******UNSPECIFIED: %s, %s\n", key, value);
+	return "UNSPECIFIED";
     }
 
     private static String supercat(String subcat) {

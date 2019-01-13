@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import xml.etree.cElementTree as ET
 import urllib2
 import json
@@ -128,3 +131,4 @@ with open("tags-spec-raw", "w") as file:
         file.write(tags[i])
         if i < len(tags)-1:
             file.write('\n')
+    file.write('\nboundary|-|area|ställe')
