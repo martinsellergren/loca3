@@ -69,6 +69,11 @@ def fromNominatimSpecialPhrases():
             tags.append('{}|{}|{}'.format(key, value, word))
     return sorted(tags)
 
+def removeDoubles(tags):
+    for line in tags:
+        key = line.split('|')[1]
+        ...
+
 def specified(key, tags):
     for line in tags:
         key2 = line.split('|')[1]
@@ -119,7 +124,9 @@ def getWord_overpass(key, value, data):
     return None
 
 tags1 = fromNominatimSpecialPhrases();
+tags1 = removeDoubles(tags1)
 tags2, fallbacks = fromOverpassTurbo();
+
 tags = merge(tags1, tags2)
 tags.extend(fallbacks)
 

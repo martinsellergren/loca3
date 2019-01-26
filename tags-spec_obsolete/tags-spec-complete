@@ -1,11 +1,11 @@
-aerialway|cable_car|Cable Car|Kabinbana
-aerialway|chair_lift|Chair Lift|Stollift
-aerialway|gondola|Gondola|Gondol
-aerialway|magic_carpet|Magic Carpet Lift|Rullband
-aerialway|platter|Platter Lift|Knapplift
-aerialway|pylon|Aerialway Pylon|Linbanestolpe
-aerialway|rope_tow|Rope Tow Lift|Replift
-aerialway|t-bar|T-bar Lift|Ankarlift
+aerialway|cable_car|Cable Car|Kabinbana-c1
+aerialway|chair_lift|Chair Lift|Stollift-c1
+aerialway|gondola|Gondola|Gondol-c1
+aerialway|magic_carpet|Magic Carpet Lift|Rullband-c1
+aerialway|platter|Platter Lift|Knapplift-c1
+aerialway|pylon|Aerialway Pylon|Linbanestolpe-c1
+aerialway|rope_tow|Rope Tow Lift|Replift-c1
+aerialway|t-bar|T-bar Lift|Ankarlift-c1
 aeroway|aerodrome|Airport|Flygplats
 aeroway|apron|Apron|Parkering av flygplan (Apron)
 aeroway|hangar|Hangar|Hangar
@@ -135,7 +135,7 @@ area|highway|Road Surface|Vägbeläggning
 barrier|bollard|Bollard|Stolpe
 barrier|cattle_grid|Cattle Grid|Färist
 barrier|city_wall|City Wall|Stadsmur
-barrier|cycle_barrier|Cycle Barrier|Cykelbarriär 
+barrier|cycle_barrier|Cycle Barrier|Cykelbarriär
 barrier|fence|Fence|Staket
 barrier|hedge|Hedge|Häck
 barrier|kissing_gate|Kissing Gate|Grind vid betesmark
@@ -228,7 +228,7 @@ craft|stonemason|Stonemason|Stenhuggare
 craft|sweep|Chimney Sweep|Sotare
 craft|tailor|Tailor|Skräddare
 craft|tiler|Tiler|Plattläggare
-craft|tinsmith|Tinsmith|Tennsmed 
+craft|tinsmith|Tinsmith|Tennsmed
 craft|upholsterer|Upholsterer|Möbelstoppare
 craft|watchmaker|Watchmaker|Urmakare (små klockor)
 craft|window_construction|Window Construction|Fönstertillverkare
@@ -291,7 +291,7 @@ highway|service|Service Road|Gränd
 highway|steps|Steps|Trappa
 highway|stile|Stile|UNSPECIFIED
 highway|stop|Stop Sign|Stoppskylt
-highway|street_lamp|Street Lamp|Gatlampa 
+highway|street_lamp|Street Lamp|Gatlampa
 highway|tertiary_link|Tertiary Link|Anslutning, tertiär väg
 highway|tertiary|Tertiary Road|Tertiär väg
 highway|track|Track|Ej underhållen bruksväg
@@ -456,7 +456,7 @@ office|political_party|Political Party|Politiskt parti
 office|research|Research Office|Forskning och utveckling
 office|telecommunication|Telecom Office|Telekom
 office|therapist|Therapist|Terapeut
-office|travel_agent|Travel Agency|Resebyrå 
+office|travel_agent|Travel Agency|Resebyrå
 place|city|City|Stad
 place|country|Country|Land
 place|county|County|Län
@@ -578,7 +578,7 @@ shop|leather|Leather Store|Läderaffär
 shop|lottery|Lottery Shop|Lotteri
 shop|mall|Mall|Köpcentrum
 shop|massage|Massage Shop|Massage
-shop|medical_supply|Medical Supply Store|Medicinsk utrustning 
+shop|medical_supply|Medical Supply Store|Medicinsk utrustning
 shop|mobile_phone|Mobile Phone Shop|Mobiltelefoner
 shop|money_lender|Money Lender|Långivare
 shop|motorcycle|Motorcycle Shop|Återförsäljare av motorcyklar
@@ -620,7 +620,7 @@ shop|vacuum_cleaner|Vacuum Cleaner Store|Dammsugarbutik
 shop|variety_store|Variety Store|Fyndbutik
 shop|video_games|Video Game Store|TV-spel
 shop|video|Video Shop|Videobutik
-shop|water_sports|Watersport/Swim Shop|Vattensport/simning 
+shop|water_sports|Watersport/Swim Shop|Vattensport/simning
 shop|weapons|Weapon Shop|Vapenaffär
 shop|window_blind|Window Blind Store|Persienner
 shop|wine|Off License|Vinaffär
@@ -697,3 +697,4 @@ shop|-|Shop|Affär
 tourism|-|Tourism|Turism
 vertex|-|Other|Annat
 waterway|-|Waterway|Vattenväg
+boundary|-|area|ställe

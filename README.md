@@ -7,4 +7,4 @@ Tag -> category, tools:
 - Nominatim method in website search's result listing ?
 
 Ej hårdkådad tag: natural=saddle. tex: Collado Resinero
-Ej förekommande i översättningslistar nämnda ovan, tex: mountain_pass
+Ej förekommande i översättningslistor nämnda ovan, tex: mountain_pass
