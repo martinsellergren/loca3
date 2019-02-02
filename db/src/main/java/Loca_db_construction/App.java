@@ -31,31 +31,34 @@ public class App {
 	//testGeom(nomDb, "placex");
 
 	Statement locaDb = createLocaDb();
-	transferGeoElements(nomDb, locaDb);
-	dedupeRoads(locaDb);
+	buildLocaDb(nomDb, locaDb);
+	//dedupeRoads(locaDb);
 	//testGeom(locaDb, "elems");
 
-	List<double[]> area = new ArrayList<>();
-	area.add(new double[]{-12.4993515, -37.4106643});
-	area.add(new double[]{-12.5110245, -37.4398378});
-	area.add(new double[]{-12.4567795, -37.4376570});
-	area.add(new double[]{-12.4545479, -37.3966189});
-	area.add(new double[]{-12.4993515, -37.4106643});
-	long popindex = 100;
+	// List<double[]> area = new ArrayList<>();
+	// area.add(new double[]{-12.4993515, -37.4106643});
+	// area.add(new double[]{-12.5110245, -37.4398378});
+	// area.add(new double[]{-12.4567795, -37.4376570});
+	// area.add(new double[]{-12.4545479, -37.3966189});
+	// area.add(new double[]{-12.4993515, -37.4106643});
+	// long popindex = 100;
 
-	queryLocaDb(locaDb, area, popindex);
+	// queryLocaDb(locaDb, area, popindex);
 
 	locaDb.close();
 	nomDb.close();
     }
 
     /**
+     * Process data in nominatim-db and insert into loca-db.
+     * Nom-db may contain multile elements for same osm-object:
+     * - For popularity: use pop of entry with max pop.
+     * - For category: Pick entry according to key-spec.
      * Insert:
-     * - popindex: increasing with popularity)
-     * - super-category: Nature/Civilization/Road
-     * ...
+     * - popindex: increasing with popularity
+     * - super- and sub-category from specs
      */
-    private static void transferGeoElements(Statement nomDb, Statement locaDb) throws SQLException {
+    private static void buildLocaDb(Statement nomDb, Statement locaDb) throws SQLException {
 	locaDb.executeUpdate("CREATE TABLE elems (" +
 			     "popindex BIGINT PRIMARY KEY, " +
 			     "name TEXT NOT NULL, " +
@@ -64,25 +67,28 @@ public class App {
 			     "geometry geometry(Geometry,4326) NOT NULL, " +
 			     "osm_id TEXT UNIQUE NOT NULL)");
 
+        ResultSet rs = nomDb.executeQuery("");
+
+
 	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
-	ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry,osm_type,osm_id FROM placex ORDER BY rank_search");
-        List<String> tagsSpec = loadTagsSpec();
-	long popindex = 0;
+	// ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry,osm_type,osm_id FROM placex ORDER BY rank_search");
+        // List<String> tagsSpec = loadTagsSpec();
+	// long popindex = 0;
 
-	while (rs.next()) {
-	    String name = rs.getString(1);
-	    if (!okName(name)) continue;
-	    String subcat = subcat(rs.getString(2), rs.getString(3), tagsSpec);
-	    String supercat = supercat(subcat);
-	    PGgeometry shape = (PGgeometry)rs.getObject(4);
-	    String osmId = rs.getString(5) + ":" + rs.getString(6);
+	// while (rs.next()) {
+	//     String name = rs.getString(1);
+	//     if (!okName(name)) continue;
+	//     String subcat = subcat(rs.getString(2), rs.getString(3), tagsSpec);
+	//     String supercat = supercat(subcat);
+	//     PGgeometry shape = (PGgeometry)rs.getObject(4);
+	//     String osmId = rs.getString(5) + ":" + rs.getString(6);
 
-	    String sql = String.format("INSERT INTO elems VALUES " +
-				       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
-				       "ON CONFLICT (osm_id) DO NOTHING",
-				       popindex++, name, supercat, subcat, shape, osmId);
-	    locaDb.executeUpdate(sql);
-	}
+	//     String sql = String.format("INSERT INTO elems VALUES " +
+	// 			       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
+	// 			       "ON CONFLICT (osm_id) DO NOTHING",
+	// 			       popindex++, name, supercat, subcat, shape, osmId);
+	//     locaDb.executeUpdate(sql);
+	// }
 	rs.close();
     }
 

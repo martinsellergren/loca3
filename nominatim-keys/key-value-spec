@@ -1,0 +1,20 @@
+// key-value spec. Specifies super- and sub-category of some specific tags. Overrides key-spec.
+place islet n
+place island n
+place archipelago n
+place peninsula n
+place field n
+place sea n
+place woodland n
+waterway stream n
+waterway river n
+waterway riverbank n
+waterway waterfall n
+waterway drystream n
+waterway wadi n
+waterway soakhole n
+waterway brook n
+waterway lake n
+waterway spring n
+waterway coastline n
+waterway creek n
