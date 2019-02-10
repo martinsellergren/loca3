@@ -1,4 +1,4 @@
-// key-value spec. Specifies super- and sub-category of some specific tags. Overrides key-spec.
+// key-value spec. Specifies super- and sub-category of some specific tags. If no sub-category specified: same as value. Overrides key-spec. Order of no significance. Much of data collected from nominatim:ClassTypes.php
 place islet n
 place island n
 place archipelago n
@@ -11,7 +11,7 @@ waterway river n
 waterway riverbank n
 waterway waterfall n
 waterway drystream n
-waterway wadi n
+waterway wadi n 'stream'
 waterway soakhole n
 waterway brook n
 waterway lake n

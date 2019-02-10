@@ -1,0 +1,26 @@
+//Ordered list of keys used in nominatim db, and corresponding super-category (Civilization, Road, Nature) and sub-category. If no sub-categoy specified: same as key. Order determines significance when an element has multiple tags - use the one listed above. Super-category may be overridden in the key-value spec. Collected from osm2pgsql/output-gazetteer.cpp of nominatim.
+place c
+aerialway c
+aeroway c
+bridge c
+tunnel c
+junction r
+highway r
+railway c
+shop c
+mountain_pass c
+waterway c
+emergency c
+craft c
+office c
+club c
+building c
+amenity c
+leisure c
+tourism c
+man_made c
+military c
+natural n
+boundary c
+landuse c
+historic c
