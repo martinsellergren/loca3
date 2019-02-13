@@ -67,16 +67,28 @@ public class App {
 
         String query = readNomQueryFromFile();
         ResultSet rs = nomDb.executeQuery(query);
+        long popindex = 0;
 
         while (rs.next()) {
             String name = fixName(rs.getString(1));
             if (!okName(name)) continue;
             String tagKey = rs.getString(2);
             String tagValue = rs.getString(3);
-            PGgeometry shape = (PGgeometry)rs.getObject(4);
-            String osmId = rs.getString(5) + ":" + rs.getString(6);
+            int rankSearch = rs.getInt(4);
+            PGgeometry shape = (PGgeometry)rs.getObject(5);
+            String osmId = rs.getString(6) + ":" + rs.getString(7);
 
-            System.out.format("%s %s %s %s\n", name, tagKey, tagValue, webAddress(osmId));
+            String[] cats = tagToSuperAndSubCategory(tagKey, tagValue, rankSearch);
+            String supercat = cats[0];
+            String subcat = cats[1];
+
+	    String sql = String.format("INSERT INTO elems VALUES " +
+				       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
+				       "ON CONFLICT (osm_id) DO NOTHING",
+				       popindex++, name, supercat, subcat, shape, osmId);
+	    locaDb.executeUpdate(sql);
+
+            //System.out.format("%s %s %s %s\n", name, tagKey, tagValue, webAddress(osmId));
         }
 
 	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
