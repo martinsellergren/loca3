@@ -15,6 +15,8 @@ import java.nio.file.Files;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.io.IOException;
+import java.util.Map;
+import java.util.HashMap;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,6 +25,14 @@ public class App {
 
     // 0en 1sv 2sp
     public static final int LANGUAGE = 0;
+
+    private static Map<String,String[]> keyConversionTable;
+    private static Map<String,String[]> keyValueConversionTable;
+
+    static {
+        loadKeyConversionTable();
+        loadKeyValueConversionTable();
+    }
 
     public static void main(String[] args) throws SQLException {
 	Statement nomDb = connectToNomDb();
@@ -51,10 +61,10 @@ public class App {
      * Process data in nominatim-db and insert into loca-db.
      * Nom-db may contain multile elements for same osm-object:
      * - For popularity: use pop of entry with max pop.
-     * - For category: Pick entry according to key-spec.
+     * - For category: Pick entry according to key-conversion-table.
      * Insert:
      * - popindex: increasing with popularity
-     * - super- and sub-category from specs (based on tagging)
+     * - super- and sub-category from conversion-tables (based on tagging)
      */
     private static void fillLocaDb(Statement nomDb, Statement locaDb) throws SQLException {
 	locaDb.executeUpdate("CREATE TABLE elems (" +
@@ -72,13 +82,14 @@ public class App {
         while (rs.next()) {
             String name = fixName(rs.getString(1));
             if (!okName(name)) continue;
-            String tagKey = rs.getString(2);
-            String tagValue = rs.getString(3);
-            int rankSearch = rs.getInt(4);
+            String[] tagKeys = rs.getString(2).split("_:_");
+            String[] tagValues = rs.getString(3).split("_:_");
+            int adminLevel = rs.getInt(4);
             PGgeometry shape = (PGgeometry)rs.getObject(5);
             String osmId = rs.getString(6) + ":" + rs.getString(7);
 
-            String[] cats = tagToSuperAndSubCategory(tagKey, tagValue, rankSearch);
+            String[] tag = pickTag(tagKeys, tagValues);
+            String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], adminLevel);
             String supercat = cats[0];
             String subcat = cats[1];
 
@@ -111,6 +122,35 @@ public class App {
 	//     locaDb.executeUpdate(sql);
 	// }
 	rs.close();
+    }
+
+    /**
+     * Pick tag based on order in key-conversion-table.
+     */
+    private static String[] pickTag(String keys[], String value[]) {
+
+        return null;
+    }
+
+    /**
+     * Converts tag to super and sub-category. Conversion based on
+     * conversion tables.
+     *
+     * If key=boundary and value=administrative: adminLevel decides cat.
+     * @return [supercat subcat]
+     */
+    private static String[] tagToSuperAndSubCategory(String key, String value, int adminLevel) {
+        if (key.equals("boundary") && value.equals("administrative"))
+            return adminBoundaryRankToCategory(adminLevel);
+
+
+    }
+
+    /**
+     * Convert nominatim's admin-level to category for admin-boundaries.
+     */
+    private static String[] adminBoundaryRankToCategory(int adminLevel) {
+        return null;
     }
 
     /**
@@ -288,5 +328,15 @@ public class App {
 	    System.out.println(name + ". " + geom);
 	}
 	st.close();
+    }
+
+    /**
+     * Load conversion tables.
+     */
+    private static void loadKeyConversionTable() {
+        //TODO
+    }
+    private static void loadKeyValueConversionTable() {
+
     }
 }

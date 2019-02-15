@@ -1,4 +1,4 @@
-// key-value spec. Specifies super- and sub-category of some specific tags. If no super/sub-category specified: as defined in key-spec. Specified categories overrides key-spec. Order of no significance. Some data collected from nominatim:ClassTypes.php. Format: key value [super-cat] ['sub-cat']
+// key-value spec. Specifies super- and sub-category of some specific tags. If no sub-category specified: as defined in key-conversion-table. Specified categories overrides key-conversion-table. Order of no significance. Some data collected from nominatim:ClassTypes.php. Format: key value [super-cat] ['sub-cat']
 place islet n 'island'
 place island n 'island'
 place archipelago n 'archipelago'
@@ -18,4 +18,5 @@ waterway lake n 'lake'
 waterway spring n 'spring'
 waterway coastline n 'coastline'
 waterway creek n
+amenity	place_of_worship c 'place of worship'
 boundary administrative c 'SPECIAL IMPLEMENTATION'

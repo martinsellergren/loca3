@@ -70,3 +70,19 @@ order by
 test tar bort kopior:
 osm_id=2401213448
 select osm_type,osm_id from placex group by osm_type,osm_id having count(*) > 1;
+
+select
+    class,
+    type,
+    left(name->'name',40),
+    admin_level,
+    'https://www.openstreetmap.org/' ||
+                                     case when osm_type='N' then 'node'
+                                          when osm_type='W' then 'way'
+                                          else 'relation'
+                                     end
+                                     || '/' || osm_id
+from
+    placex
+where
+    osm_type = 'N' and osm_id = 2563096203;

@@ -1,4 +1,4 @@
-//Ordered list of keys used in nominatim db, and corresponding super-category (Civilization, Road, Nature) and sub-category. If no sub-categoy specified: same as key. Order determines significance when an element has multiple tags - use the one listed above. Categories may be overridden in the key-value spec. Keys collected from osm2pgsql/output-gazetteer.cpp of nominatim. Format: key super-cat ['sub-cat']
+//Ordered list of keys used in nominatim db, and corresponding super-category (Civilization, Road, Nature) and sub-category. If no sub-categoy specified: same as key. Order determines significance when an element has multiple tags - use the one listed above. Categories may be overridden in the key-value-conversion-table. Keys collected from osm2pgsql/output-gazetteer.cpp of nominatim. Format: key super-cat ['sub-cat']
 aerialway c
 aeroway c
 bridge c
