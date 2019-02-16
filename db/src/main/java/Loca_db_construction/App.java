@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.io.IOException;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Arrays;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,12 +27,21 @@ public class App {
     // 0en 1sv 2sp
     public static final int LANGUAGE = 0;
 
+    /**
+     * key -> [super-cat(c/n/r), sub-cat] */
     private static Map<String,String[]> keyConversionTable;
+
+    /**
+     * key:value -> [super-cat(c/n/r), sub-cat]  */
     private static Map<String,String[]> keyValueConversionTable;
 
     static {
-        loadKeyConversionTable();
-        loadKeyValueConversionTable();
+        keyConversionTable = loadKeyConversionTable();
+        keyValueConversionTable = loadKeyValueConversionTable();
+
+        for (Map.Entry<String, String[]> entry : keyConversionTable.entrySet()) {
+            System.out.format("%s %s %s\n", entry.getKey(), entry.getValue()[0], entry.getValue()[1]);
+        }
     }
 
     public static void main(String[] args) throws SQLException {
@@ -39,7 +49,7 @@ public class App {
 	//testGeom(nomDb, "placex");
 
 	Statement locaDb = createLocaDb();
-	fillLocaDb(nomDb, locaDb);
+	// fillLocaDb(nomDb, locaDb);
 	//dedupeRoads(locaDb);
 	//testGeom(locaDb, "elems");
 
@@ -143,7 +153,7 @@ public class App {
         if (key.equals("boundary") && value.equals("administrative"))
             return adminBoundaryRankToCategory(adminLevel);
 
-
+        return null;
     }
 
     /**
@@ -151,35 +161,6 @@ public class App {
      */
     private static String[] adminBoundaryRankToCategory(int adminLevel) {
         return null;
-    }
-
-    /**
-     * @return File-text.
-     */
-    private static List<String> readFile(String path) {
-        try {
-            Charset charset = Charset.forName("UTF-8");
-            return Files.readAllLines(Paths.get(path), charset);
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            System.exit(-1);
-            return null;
-        }
-    }
-
-    /**
-     * @return Query for extracting data from nom-db.
-     */
-    private static String readNomQueryFromFile() {
-        List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
-
-        StringBuilder sb = new StringBuilder();
-        for (String x : xs) {
-            sb.append(x + " ");
-        }
-
-        return sb.toString();
     }
 
     /**
@@ -331,12 +312,59 @@ public class App {
     }
 
     /**
-     * Load conversion tables.
+     * Load conversion tables into map:
      */
-    private static void loadKeyConversionTable() {
-        //TODO
-    }
-    private static void loadKeyValueConversionTable() {
+    private static Map<String, String[]> loadKeyConversionTable() {
+        Map<String, String[]> table = new HashMap<>();
+        List<String> entries = readFile("/home/martin/loca3/loca3/tag-to-category-conversion/key-conversion-table");
+        entries = entries.subList(1, entries.size());
 
+        for (String entry : entries) {
+            String[] blocks = entry.split(" ");
+            String key = blocks[0];
+            String supercat = blocks[1];
+            String subcat = blocks.length == 2 ?
+                key :
+                Pattern.compile("('.+')").matcher(entry).group(1);
+
+            table.put(key, new String[]{supercat, subcat});
+        }
+        return table;
+    }
+    private static Map<String, String[]> loadKeyValueConversionTable() {
+        Map<String, String[]> table = new HashMap<>();
+        List<String> entries = readFile("/home/martin/loca3/loca3/tag-to-category-conversion/key-value-conversion-table");
+
+        for (String entry :  entries) {
+            String[] blocks = entry.split(" ");
+
+        }
+
+        return table;
+    }
+
+    /**
+     * @return File-text.
+     */
+    private static List<String> readFile(String path) {
+        try {
+            Charset charset = Charset.forName("UTF-8");
+            return Files.readAllLines(Paths.get(path), charset);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            System.exit(-1);
+            return null;
+        }
+    }
+
+    /**
+     * @return Query for extracting data from nom-db.
+     */
+    private static String readNomQueryFromFile() {
+        List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
+        StringBuilder sb = new StringBuilder();
+        for (String x : xs) sb.append(x + " ");
+        return sb.toString();
     }
 }
