@@ -2,7 +2,7 @@
  * For creating the loca db. Source is an existing nominatim db.
  *
  * Post: Loca db with geo-objects.
- * - Geo-objects have unique osm-id.
+ * - Geo-objects have popindex, increasing with popularity.
  * - May have same names + categories.
  */
 package Loca_db_construction;
@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.io.IOException;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Arrays;
 
 import java.util.regex.Matcher;
@@ -37,11 +38,7 @@ public class App {
 
     static {
         keyConversionTable = loadKeyConversionTable();
-        keyValueConversionTable = loadKeyValueConversionTable();
-
-        for (Map.Entry<String, String[]> entry : keyConversionTable.entrySet()) {
-            System.out.format("%s %s %s\n", entry.getKey(), entry.getValue()[0], entry.getValue()[1]);
-        }
+        keyValueConversionTable = loadKeyValueConversionTable(keyConversionTable);
     }
 
     public static void main(String[] args) throws SQLException {
@@ -49,7 +46,7 @@ public class App {
 	//testGeom(nomDb, "placex");
 
 	Statement locaDb = createLocaDb();
-	// fillLocaDb(nomDb, locaDb);
+	fillLocaDb(nomDb, locaDb);
 	//dedupeRoads(locaDb);
 	//testGeom(locaDb, "elems");
 
@@ -98,16 +95,22 @@ public class App {
             PGgeometry shape = (PGgeometry)rs.getObject(5);
             String osmId = rs.getString(6) + ":" + rs.getString(7);
 
-            String[] tag = pickTag(tagKeys, tagValues);
-            String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], adminLevel);
-            String supercat = cats[0];
-            String subcat = cats[1];
+            if (tagKeys.length > 1) {
+                String[] tag = pickTag(tagKeys, tagValues);
+                System.out.println(Arrays.toString(tagKeys));
+                System.out.println("       :" + tag[0]);
+                System.out.println("");
+            }
 
-	    String sql = String.format("INSERT INTO elems VALUES " +
-				       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
-				       "ON CONFLICT (osm_id) DO NOTHING",
-				       popindex++, name, supercat, subcat, shape, osmId);
-	    locaDb.executeUpdate(sql);
+            // String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], adminLevel);
+            // String supercat = cats[0];
+            // String subcat = cats[1];
+
+	    // String sql = String.format("INSERT INTO elems VALUES " +
+	    //     		       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
+	    //     		       "ON CONFLICT (osm_id) DO NOTHING",
+	    //     		       popindex++, name, supercat, subcat, shape, osmId);
+	    // locaDb.executeUpdate(sql);
 
             //System.out.format("%s %s %s %s\n", name, tagKey, tagValue, webAddress(osmId));
         }
@@ -138,8 +141,15 @@ public class App {
      * Pick tag based on order in key-conversion-table.
      */
     private static String[] pickTag(String keys[], String value[]) {
-
-        return null;
+        int i = 0;
+        for (Map.Entry<String, String[]> entry : keyConversionTable.entrySet()) {
+            String tableKey = entry.getKey();
+            int index = Arrays.asList(keys).indexOf(tableKey);
+            if (index != -1) {
+                return new String[]{keys[index], value[index]};
+            }
+        }
+        throw new RuntimeException("Dead end");
     }
 
     /**
@@ -312,32 +322,42 @@ public class App {
     }
 
     /**
-     * Load conversion tables into map:
+     * Load conversion tables into an ORDERED map.
      */
     private static Map<String, String[]> loadKeyConversionTable() {
-        Map<String, String[]> table = new HashMap<>();
+        Map<String, String[]> table = new LinkedHashMap<>();
         List<String> entries = readFile("/home/martin/loca3/loca3/tag-to-category-conversion/key-conversion-table");
         entries = entries.subList(1, entries.size());
 
         for (String entry : entries) {
             String[] blocks = entry.split(" ");
+
             String key = blocks[0];
             String supercat = blocks[1];
             String subcat = blocks.length == 2 ?
                 key :
-                Pattern.compile("('.+')").matcher(entry).group(1);
+                entry.replaceFirst(".*'(.+)'.*", "$1");
 
             table.put(key, new String[]{supercat, subcat});
         }
         return table;
     }
-    private static Map<String, String[]> loadKeyValueConversionTable() {
+    private static Map<String, String[]> loadKeyValueConversionTable(Map<String, String[]> keyConvTable) {
         Map<String, String[]> table = new HashMap<>();
         List<String> entries = readFile("/home/martin/loca3/loca3/tag-to-category-conversion/key-value-conversion-table");
+        entries = entries.subList(1, entries.size());
 
         for (String entry :  entries) {
             String[] blocks = entry.split(" ");
 
+            String key = blocks[0];
+            String value = blocks[1];
+            String supercat = blocks[2];
+            String subcat = blocks.length == 3 ?
+                keyConvTable.get(key)[1] :
+                entry.replaceFirst(".*'(.+)'.*", "$1");
+
+            table.put(key + ":" + value, new String[]{supercat, subcat});
         }
 
         return table;

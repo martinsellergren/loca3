@@ -8,10 +8,11 @@ select
     name->'name',
     classes,
     types,
+    admin_level,
     geometry,
     osm_type,
     osm_id
 from summary
-where index = 1 AND name->'name' != '' AND osm_id=2401213448
+where index = 1 AND name->'name' != ''
 order by
       coalesce(importance, 0.75-(rank_search*1.0/40)) desc;
