@@ -95,45 +95,19 @@ public class App {
             PGgeometry shape = (PGgeometry)rs.getObject(5);
             String osmId = rs.getString(6) + ":" + rs.getString(7);
 
-            if (tagKeys.length > 1) {
-                String[] tag = pickTag(tagKeys, tagValues);
-                System.out.println(Arrays.toString(tagKeys));
-                System.out.println("       :" + tag[0]);
-                System.out.println("");
-            }
+            String[] tag = pickTag(tagKeys, tagValues);
+            String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], adminLevel);
+            String supercat = cats[0];
+            String subcat = cats[1];
+            //System.out.format("%s:%s -> %s:%s\n", tag[0], tag[1], supercat, subcat);
 
-            // String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], adminLevel);
-            // String supercat = cats[0];
-            // String subcat = cats[1];
-
-	    // String sql = String.format("INSERT INTO elems VALUES " +
-	    //     		       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
-	    //     		       "ON CONFLICT (osm_id) DO NOTHING",
-	    //     		       popindex++, name, supercat, subcat, shape, osmId);
-	    // locaDb.executeUpdate(sql);
-
-            //System.out.format("%s %s %s %s\n", name, tagKey, tagValue, webAddress(osmId));
+	    String sql = String.format("INSERT INTO elems VALUES " +
+	        		       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
+	        		       "ON CONFLICT (osm_id) DO UPDATE SET name = '!!!!!CONFLICT!!!!!'",
+	        		       popindex++, name, supercat, subcat, shape, osmId);
+	    locaDb.executeUpdate(sql);
+            //System.out.format("%s %s %s %s\n", name, supercat, subcat, webAddress(osmId));
         }
-
-	//ResultSet rs = nomDb.executeQuery("SELECT class,type,name,geometry FROM placex ORDER BY importance");
-	// ResultSet rs = nomDb.executeQuery("SELECT name,class,type,geometry,osm_type,osm_id FROM placex ORDER BY rank_search");
-        // List<String> tagsSpec = loadTagsSpec();
-	// long popindex = 0;
-
-	// while (rs.next()) {
-	//     String name = rs.getString(1);
-	//     if (!okName(name)) continue;
-	//     String subcat = subcat(rs.getString(2), rs.getString(3), tagsSpec);
-	//     String supercat = supercat(subcat);
-	//     PGgeometry shape = (PGgeometry)rs.getObject(4);
-	//     String osmId = rs.getString(5) + ":" + rs.getString(6);
-
-	//     String sql = String.format("INSERT INTO elems VALUES " +
-	// 			       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
-	// 			       "ON CONFLICT (osm_id) DO NOTHING",
-	// 			       popindex++, name, supercat, subcat, shape, osmId);
-	//     locaDb.executeUpdate(sql);
-	// }
 	rs.close();
     }
 
@@ -157,20 +131,36 @@ public class App {
      * conversion tables.
      *
      * If key=boundary and value=administrative: adminLevel decides cat.
-     * @return [supercat subcat]
+     * @return [supercat(c/r/n) subcat]
      */
     private static String[] tagToSuperAndSubCategory(String key, String value, int adminLevel) {
         if (key.equals("boundary") && value.equals("administrative"))
             return adminBoundaryRankToCategory(adminLevel);
 
-        return null;
+        String[] cats = keyValueConversionTable.get(key + ":" + value);
+        if (cats != null)
+            return cats;
+        else
+            return keyConversionTable.get(key);
     }
 
     /**
      * Convert nominatim's admin-level to category for admin-boundaries.
      */
     private static String[] adminBoundaryRankToCategory(int adminLevel) {
-        return null;
+        String subcat = "border";
+        switch (adminLevel) {
+        case 1: subcat = "continent"; break;
+        case 2: subcat = "country"; break;
+        case 3: subcat = "state"; break;
+        case 4: subcat = "state"; break;
+        case 5: subcat = "state district"; break;
+        case 6: subcat = "county"; break;
+        case 7: subcat = "county"; break;
+        case 8: subcat = "city"; break;
+        case 9: subcat = "city district";
+        }
+        return new String[]{"c", subcat};
     }
 
     /**
@@ -191,32 +181,6 @@ public class App {
 
     private static void dedupeRoads(Statement locaDb) {
 	// TODO
-    }
-
-    private static String subcat(String key, String value, List<String> tagsSpec) {
-	//return (value.equalsIgnoreCase("yes") ? key : value);
-
-        for (String line : tagsSpec) {
-            //System.out.println(line);
-            String[] parts = line.split("\\|");
-            String key2 = parts[0];
-            String value2 = parts[1];
-            String subcat = parts[2 + LANGUAGE];
-
-            if ((key.equalsIgnoreCase(key2) && value.equalsIgnoreCase(value2)) ||
-                (key.equalsIgnoreCase(key2) && value2.equals("-"))) {
-
-                //System.out.printf("%s, %s, %s\n", key, value, subcat);
-                return subcat;
-            }
-        }
-
-        System.out.printf("******UNSPECIFIED: %s, %s\n", key, value);
-	return "UNSPECIFIED";
-    }
-
-    private static String supercat(String subcat) {
-	return "Civilization";
     }
 
     /**
@@ -240,7 +204,7 @@ public class App {
 	    String osmId = rs.getString(6);
 
 	    System.out.printf("%s. %s. %s. %s. %s\n",
-			      popindex, defaultName(name), supercat, subcat, webAddress(osmId));
+			      popindex, name, supercat, subcat, webAddress(osmId));
 	}
 
 	return null;
@@ -262,17 +226,8 @@ public class App {
     }
 
     /**
-     * @param name Name-data, multiple names from different countries.
+     * @return Web address to osm-element.
      */
-    private static String defaultName(String name) {
-	String regex = "\"name\"=>\"(.*?)\"";
-	Pattern p = Pattern.compile(regex);
-	Matcher m = p.matcher(name);
-
-	if (!m.find()) throw new RuntimeException("No default name:\n" + name);
-	return m.group(1);
-    }
-
     private static String webAddress(String osmId) {
 	String type = osmId.split(":")[0];
 	String id = osmId.split(":")[1];
@@ -280,6 +235,9 @@ public class App {
 	return String.format("https://www.openstreetmap.org/%s/%s", type, id);
     }
 
+    /**
+     * Create a new postgis db named loca. Remove if exists.
+     */
     private static Statement createLocaDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/";
 	Connection conn = DriverManager.getConnection(url + "nominatim", "martin", "pass");
@@ -296,6 +254,10 @@ public class App {
 	return st;
     }
 
+    /**
+     * Connect to existing nominatim db.
+     * @return Handle to manipulate db.
+     */
     private static Statement connectToNomDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
@@ -322,7 +284,7 @@ public class App {
     }
 
     /**
-     * Load conversion tables into an ORDERED map.
+     * Load key-conversion-table into an ORDERED map.
      */
     private static Map<String, String[]> loadKeyConversionTable() {
         Map<String, String[]> table = new LinkedHashMap<>();
@@ -342,6 +304,10 @@ public class App {
         }
         return table;
     }
+
+    /**
+     * Load key-value-conversion-table into a regular map.
+     */
     private static Map<String, String[]> loadKeyValueConversionTable(Map<String, String[]> keyConvTable) {
         Map<String, String[]> table = new HashMap<>();
         List<String> entries = readFile("/home/martin/loca3/loca3/tag-to-category-conversion/key-value-conversion-table");
@@ -359,7 +325,6 @@ public class App {
 
             table.put(key + ":" + value, new String[]{supercat, subcat});
         }
-
         return table;
     }
 

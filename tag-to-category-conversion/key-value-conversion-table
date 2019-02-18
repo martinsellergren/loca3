@@ -20,3 +20,4 @@ waterway coastline n 'coastline'
 waterway creek n
 amenity place_of_worship c 'place of worship'
 boundary administrative c 'SPECIAL IMPLEMENTATION'
+boundary national_park n 'national park'
