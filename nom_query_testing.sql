@@ -1,3 +1,5 @@
+--------------------------------------------------------------------nom
+
 select
     left(name->'name', 30),
     place_id,
@@ -86,3 +88,85 @@ from
     placex
 where
     osm_type = 'N' and osm_id = 2563096203;
+
+
+select
+    string_agg('https://www.openstreetmap.org/' ||
+                                     case when osm_type='N' then 'node'
+                                          when osm_type='W' then 'way'
+                                          else 'relation'
+                                     end
+                                     || '/' || osm_id, ', ')
+from placex
+where wikipedia != ''
+group by wikipedia
+having count(*) > 1;
+
+
+
+ en:Obo_Natural_Park
+ en:Sete_Pedras
+
+select
+    name->'name',
+    'https://www.openstreetmap.org/' ||
+                                     case when osm_type='N' then 'node'
+                                          when osm_type='W' then 'way'
+                                          else 'relation'
+                                     end
+                                     || '/' || osm_id
+from placex where wikipedia = 'en:Obo_Natural_Park';
+
+
+
+
+
+
+
+select
+    name->'name',
+    ROW_NUMBER() OVER (PARTITION BY osm_type,osm_id ORDER BY coalesce(importance, 0.75-(rank_search*1.0/40))) as osmId_index,
+    ROW_NUMBER() OVER (PARTITION BY coalesce(wikipedia, place_id::text) ORDER BY coalesce(importance, 0.75-(rank_search*1.0/40))) as wikipedia_index,
+    ROW_NUMBER() OVER (PARTITION BY coalesce(extratags->'wikidata', place_id::text) ORDER BY coalesce(importance, 0.75-(rank_search*1.0/40))) as wikidata_index
+from placex;
+
+
+WITH summary as (
+     select *,
+     ROW_NUMBER() OVER (PARTITION BY osm_type,osm_id ORDER BY coalesce(importance, 0.75-(rank_search*1.0/40))) as osmId_index,
+     ROW_NUMBER() OVER (PARTITION BY wikipedia ORDER BY coalesce(importance, 0.75-(rank_search*1.0/40))) as wikipedia_index,
+     ROW_NUMBER() OVER (PARTITION BY extratags->'wikidata' ORDER BY coalesce(importance, 0.75-(rank_search*1.0/40))) as wikidata_index,
+     string_agg(class, '_:_') OVER (PARTITION BY osm_type,osm_id ORDER BY place_id) as classes,
+     string_agg(type, '_:_') OVER (PARTITION BY osm_type,osm_id ORDER BY place_id) as types
+     from placex)
+select
+    name->'name',
+    classes,
+    types,
+    admin_level,
+    geometry,
+    osm_type,
+    osm_id
+from summary
+where index = 1 AND name->'name' != ''
+order by
+      coalesce(importance, 0.75-(rank_search*1.0/40)) desc;
+
+
+
+
+
+------------------------------------------------------------------loca
+
+select
+    string_agg(popindex || '', ', '),
+    name,
+    string_agg(supercat, ', '),
+    string_agg(subcat, ', '),
+    string_agg(osm_id, ', ')
+from
+    elems
+group by
+      name
+having
+    count(*) > 1;
