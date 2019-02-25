@@ -89,38 +89,52 @@ public class App {
         while (rs.next()) {
             String name = fixName(rs.getString(1));
             if (!okName(name)) continue;
-            String[] tagKeys = rs.getString(2).split("_:_");
-            String[] tagValues = rs.getString(3).split("_:_");
-            int adminLevel = rs.getInt(4);
-            PGgeometry shape = (PGgeometry)rs.getObject(5);
+            String[] tagKeys = (String[])rs.getArray(2).getArray();
+            String[] tagValues = (String[])rs.getArray(3).getArray();
+            Short[] adminLevels = (Short[])rs.getArray(4).getArray();
+            PGgeometry[] shapes = toShapes(rs.getArray(5).getArray());
             String osmId = rs.getString(6) + ":" + rs.getString(7);
 
-            String[] tag = pickTag(tagKeys, tagValues);
-            String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], adminLevel);
+            String[] tag = pickTag(tagKeys, tagValues, adminLevels);
+            String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], Integer.parseInt(tag[2]));
             String supercat = cats[0];
             String subcat = cats[1];
-            //System.out.format("%s:%s -> %s:%s\n", tag[0], tag[1], supercat, subcat);
+            //System.out.format("%s:%s:%s -> %s:%s\n", tag[0], tag[1], tag[2], supercat, subcat);
+            PGgeometry shape = pickShape(shapes);
 
 	    String sql = String.format("INSERT INTO elems VALUES " +
 	        		       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
 	        		       "ON CONFLICT (osm_id) DO UPDATE SET name = '!!!!!CONFLICT!!!!!'",
 	        		       popindex++, name, supercat, subcat, shape, osmId);
 	    locaDb.executeUpdate(sql);
-            //System.out.format("%s %s %s %s\n", name, supercat, subcat, webAddress(osmId));
+            System.out.format("%s %s %s %s\n", name, supercat, subcat, webAddress(osmId));
         }
 	rs.close();
     }
 
     /**
-     * Pick tag based on order in key-conversion-table.
+     * @return List of shapes.
      */
-    private static String[] pickTag(String keys[], String value[]) {
+    private static PGgeometry[] toShapes(Object masterObj) {
+        Object objs[] = (Object[])masterObj;
+        PGgeometry[] shapes = new PGgeometry[objs.length];
+        for (int i = 0; i < objs.length; i++)
+            shapes[i] = (PGgeometry)objs[i];
+        return shapes;
+    }
+
+    /**
+     * Pick tag based on order in key-conversion-table.
+     * @return [key, value, adminLevel]. Admin-level only of interest
+     * for specific tags.
+     */
+    private static String[] pickTag(String keys[], String values[], Short[] adminLevels) {
         int i = 0;
         for (Map.Entry<String, String[]> entry : keyConversionTable.entrySet()) {
             String tableKey = entry.getKey();
             int index = Arrays.asList(keys).indexOf(tableKey);
             if (index != -1) {
-                return new String[]{keys[index], value[index]};
+                return new String[]{keys[index], values[index], adminLevels[index]+""};
             }
         }
         throw new RuntimeException("Dead end");
@@ -161,6 +175,16 @@ public class App {
         case 9: subcat = "city district";
         }
         return new String[]{"c", subcat};
+    }
+
+    /**
+     * @param shapes Array of different representations of a certain
+     * geo-object, ordered by 'in some sence' importance.
+     * @return Shape picked to represent the object.
+     */
+    private static PGgeometry pickShape(PGgeometry[] shapes) {
+        //TODO smart pick.
+        return shapes[0];
     }
 
     /**
