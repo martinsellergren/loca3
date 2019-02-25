@@ -91,6 +91,7 @@ where
 
 
 select
+    array_agg(name->'name'),
     string_agg('https://www.openstreetmap.org/' ||
                                      case when osm_type='N' then 'node'
                                           when osm_type='W' then 'way'
@@ -100,6 +101,20 @@ select
 from placex
 where wikipedia != ''
 group by wikipedia
+having count(*) > 1;
+
+select
+    array_agg(name->'name'),
+    array_agg(importance),
+    string_agg('https://www.openstreetmap.org/' ||
+                                     case when osm_type='N' then 'node'
+                                          when osm_type='W' then 'way'
+                                          else 'relation'
+                                     end
+                                     || '/' || osm_id, ', ')
+from placex
+where extratags->'wikidata' != ''
+group by extratags->'wikidata'
 having count(*) > 1;
 
 
@@ -153,8 +168,36 @@ order by
       coalesce(importance, 0.75-(rank_search*1.0/40)) desc;
 
 
+select
+    array_agg(name->'name'),
+    array_agg(coalesce(importance, 0.75-(rank_search*1.0/40)))
+from
+    placex
+group by
+      osm_type, osm_id
+having
+    count(*) > 1;
 
 
+select name->'name',class,type
+from placex
+where name->'name' = 'Cascata de Bombaim';
+
+select
+    class,type,classes,types
+from
+(
+    select
+        *,
+        array_agg(name->'name') over w as names,
+        array_agg(class) over w as classes,
+        array_agg(type) over w as types
+    from
+        placex
+    window w as (partition by osm_type,osm_id order by place_id range between unbounded preceding and unbounded following)
+) as foo
+where
+    name->'name' = 'Cascata de Bombaim';
 
 ------------------------------------------------------------------loca
 
