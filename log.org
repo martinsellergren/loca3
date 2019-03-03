@@ -1,6 +1,15 @@
+* 3/3
+ Parque Natural Ôbo d | W        |  298565114 | en:Obo Natural Park               | en:Obo_Natural_Park
+ Parque Natural Ôbo d | R        |    4109839 | en:Obo Natural Park               | en:Obo_Natural_Park
+
+ São Tomé e Príncipe  | R        |     535880 | en:São Tomé and Príncipe          | en:São_Tomé_and_Príncipe
+ São Tomé e Príncipe  | N        |  249399429 | fr:Sao Tomé-et-Principe           | fr:Sao_Tomé-et-Principe
+
+
 * 25/2
 Bug i sql-queryn: behöver specificera 'window frame' för partition för att inkludera alla element i partitionen:
 window w as (partition by osm_type,osm_id order by place_id *range between unbounded preceding and unbounded following*)
+
 
 * 11/2
 Kommando som avslöjar nominatim's ClassTypes.php: egrep -iv " (\w+?)[ _:].*?'\1.*'" tags-from-classTypes
