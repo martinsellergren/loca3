@@ -27,7 +27,8 @@ select
     admin_levels,
     geometries,
     osm_type::text || ':' || osm_id as id,
-    extratags->'wikidata' as wikidata
+    extratags->'wikidata' as wikidata,
+    wikipedia
 from aux1
 where index = 1),
 
@@ -36,6 +37,7 @@ aux3 as (
 select
     name,
     importance,
+    wikipedia,
     row_number() over ordered_by_importance as index,
     array_agg(classes) over ordered_by_id as classes,
     array_agg(types) over ordered_by_id as types,
@@ -50,15 +52,38 @@ window ordered_by_importance as (
 ordered_by_id as (
             partition by coalesce(wikidata, id)
             order by id
-            range between unbounded preceding and unbounded following))
+            range between unbounded preceding and unbounded following)),
 
+-- Filter wikidata and group by wikipedia.
+aux4 as (
 select
     name,
-    classes,
-    types,
-    admin_levels,
-    --geometries,
-    ids
+    importance,
+    row_number() over ordered_by_importance as index,
+    array_agg(classes) over ordered_by_id as classes,
+    array_agg(types) over ordered_by_id as types,
+    array_agg(admin_levels) over ordered_by_id as admin_levels,
+    array_agg(geometries) over ordered_by_id as geometries,
+    array_agg(ids) over ordered_by_importance as ids
 from aux3
+where index = 1
+window ordered_by_importance as (
+            partition by coalesce(wikipedia, array_to_string(ids,','))
+            order by importance desc
+            range between unbounded preceding and unbounded following),
+ordered_by_id as (
+            partition by coalesce(wikipedia, array_to_string(ids,','))
+            order by array_to_string(ids,',')
+            range between unbounded preceding and unbounded following))
+
+-- Filter wikipedia and final return
+select
+    name,
+    array_to_string(classes, '___'),
+    array_to_string(types, '___'),
+    array_to_string(admin_levels, '___'),
+    geometries,
+    array_to_string(ids, '___')
+from aux4
 where index = 1
 order by importance desc;
