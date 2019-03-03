@@ -76,14 +76,14 @@ ordered_by_id as (
             order by array_to_string(ids,',')
             range between unbounded preceding and unbounded following))
 
--- Filter wikipedia and final return
+-- Filter wikipedia and final return (unnested arrays)
 select
     name,
-    array_to_string(classes, '___'),
-    array_to_string(types, '___'),
-    array_to_string(admin_levels, '___'),
-    geometries,
-    array_to_string(ids, '___')
+    string_to_array(array_to_string(classes, '|'), '|') as classes,
+    string_to_array(array_to_string(types, '|'), '|') as types,
+    string_to_array(array_to_string(admin_levels, '|'), '|') as admin_levels,
+    string_to_array(array_to_string(geometries, '|'), '|') as geometries,
+    string_to_array(array_to_string(ids, '|'), '|') as ids
 from aux4
 where index = 1
 order by importance desc;
