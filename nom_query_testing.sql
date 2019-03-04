@@ -219,7 +219,7 @@ Avenida Marginal 12 Julho      | {617,516,514,517,525,597,613,618,611,612}    | 
 
 select
     left(name,30),
-    array_agg(popindex),
+    array_agg(popindex) over same_names
     array_agg(popindex) filter(where popindex=min(popindex))
 
 from elems
