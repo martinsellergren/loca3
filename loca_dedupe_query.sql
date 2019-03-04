@@ -1,3 +1,5 @@
+CREATE EXTENSION unaccent;
+
 -- Add cluster-index. Clusters of proximate elements with same names.
 with aux1 as (
 select *,
