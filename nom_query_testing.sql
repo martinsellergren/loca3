@@ -236,7 +236,7 @@ from elems
 window same_names as (
        partition by name order by popindex);
 
------------------------------------------------------------------------------other
+--------------------------------------------------------------other
 
 drop function if exists withUniqueId;
 create function withUniqueId(anyarray, text[]) returns anyarray as $$
@@ -248,3 +248,34 @@ create function withUniqueId(anyarray, text[]) returns anyarray as $$
 $$ LANGUAGE SQL;
 
 select withUniqueId(ARRAY[1,2,3,4,5,6,7,8,9,1], ARRAY['1','2','3','1','3','4','1','2','2','432']);
+
+
+drop function if exists pickGeometry;
+create function pickGeometry(geometry[], double precision[]) returns geometry as $$
+       select coalesce(
+              (select geometry
+              from unnest($1, $2) as t(geometry, importance)
+              where ST_NPoints(geometry) > 1
+              order by importance desc
+              limit 1)
+              ,
+              (select geometry
+              from unnest($1, $2) as t(geometry, importance)
+              order by importance desc
+              limit 1));
+$$ LANGUAGE SQL;
+
+
+
+select pickGeometry(geoms, ARRAY[3, 2])
+from(
+select
+    name->'name',
+    array_agg(GeometryType(geometry)),
+    array_agg(ST_NPoints(geometry)),
+    array_agg(geometry) as geoms
+from placex
+group by name->'name'
+order by coalesce(max(importance), 0.75-(min(rank_search)*1.0/40)) desc
+limit 1
+) as _;

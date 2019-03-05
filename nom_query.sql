@@ -1,11 +1,43 @@
+CREATE EXTENSION if not exists postgis;
+
+/**
+ * @param1 elems
+ * @param2 ids
+ * Each elem in elems has corresponding id in ids.
+ * Returns elems with unique ids.
+ */
 drop function if exists withUniqueId;
 create function withUniqueId(anyarray, text[]) returns anyarray as $$
        with elems as (
        select (array_agg(elem))[1] as elem
        from unnest($1, $2) as t(elem, id)
-       group by id)
+       group by id
+       order by id)
        select array_agg(elem) from elems;
 $$ LANGUAGE SQL;
+
+/**
+ * @param1 geometries
+ * @param2 importances
+ * Each geometry in geometries has corresponding importance in importances.
+ * Return most important geometry that isn't a node.
+ * If all geometries are nodes, return most important node.
+ */
+drop function if exists pickGeometry;
+create function pickGeometry(geometry[], double precision[]) returns geometry as $$
+       select coalesce(
+              (select geometry
+              from unnest($1, $2) as t(geometry, importance)
+              where ST_NPoints(geometry) > 1
+              order by importance desc
+              limit 1)
+              ,
+              (select geometry
+              from unnest($1, $2) as t(geometry, importance)
+              order by importance desc
+              limit 1));
+$$ LANGUAGE SQL;
+
 
 
 with aux as (
@@ -57,11 +89,11 @@ same_wikipedia as (
 select
     row_number() over (order by importance desc) as popindex,
     name,
-    withUniqueId(classes, osm_ids),
-    withUniqueId(types, osm_ids),
-    withUniqueId(admin_levels, osm_ids),
-    --pickGeometry(geometries, importances),
-    withUniqueId(osm_ids, osm_ids)
+    withUniqueId(classes, osm_ids) as classes,
+    withUniqueId(types, osm_ids) as types,
+    withUniqueId(admin_levels, osm_ids) as admin_levels,
+    GeometryType(pickGeometry(geometries, importances)) as geometry,
+    withUniqueId(osm_ids, osm_ids) as osm_ids
 from
     aux
 where
