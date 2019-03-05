@@ -43,6 +43,7 @@ select
 from
     placex
 where
+    name->'name' = 'São Tomé e Príncipe';
     place_id in (102524, 100001);
 
     geometry,
@@ -199,6 +200,15 @@ from
 where
     name->'name' = 'Cascata de Bombaim';
 
+
+select array_agg(name->'name')
+from placex
+where name->'name' ~ 'cipe';
+
+select name->'name' as nameee
+from placex
+group by nameeeee;
+
 ------------------------------------------------------------------loca
 
 select
@@ -225,3 +235,16 @@ select
 from elems
 window same_names as (
        partition by name order by popindex);
+
+-----------------------------------------------------------------------------other
+
+drop function if exists withUniqueId;
+create function withUniqueId(anyarray, text[]) returns anyarray as $$
+       with elems as (
+       select (array_agg(elem))[1] as elem
+       from unnest($1, $2) as t(elem, id)
+       group by id)
+       select array_agg(elem) from elems;
+$$ LANGUAGE SQL;
+
+select withUniqueId(ARRAY[1,2,3,4,5,6,7,8,9,1], ARRAY['1','2','3','1','3','4','1','2','2','432']);
