@@ -1,12 +1,12 @@
 CREATE EXTENSION unaccent;
 
--- Add cluster-index. Clusters of proximate elements with same names.
+-- Add cluster-index. Clusters of proximate elements with same name. Ignore nodes and closed-path elements.
 with aux1 as (
 select *,
-    ST_ClusterDBSCAN(geometry, eps := 50, minpoints := 1) over same_names AS cid
+    ST_ClusterDBSCAN(geometry, eps := 50, minpoints := 1) over same_name AS cid
 from elems
 where supercat = 'r'
-window same_names as (
+window same_name as (
             partition by unaccent(name)
             range between unbounded preceding and unbounded following))
 
@@ -14,17 +14,17 @@ window same_names as (
 with aux2 as (
 select *,
     row_number() over same_clusters as index,
-    array_agg(geometry) over same_clusters as geometries,
-    array_agg(osm_id) over same_clusters as osm_ids
+    array_agg(geometry order by osm_id) over same_cluster as geometries,
+    array_agg(osm_id order by osm_id) over same_clusters as osm_ids
 from aux1
-window same_clusters as (
+window same_cluster as (
        partition by unaccent(name), cid
-       order by popindex
+       order by importance desc
        range between unbounded preceding and unbounded following))
 
--- Filter out most important elem, with additional data.
+-- Filter out most important elem in each cluster for picking name and categories. Geometries and ids from all elems in same cluster. Add popindex.
 select
-    popindex,
+    row_number() over (order by importance desc) as popindex,
     name,
     supercat,
     subcat,
@@ -32,4 +32,4 @@ select
     osm_ids
 from aux2
 where index = 1
-order by popindex;
+order by importance desc;
