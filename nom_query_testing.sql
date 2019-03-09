@@ -279,3 +279,8 @@ group by name->'name'
 order by coalesce(max(importance), 0.75-(min(rank_search)*1.0/40)) desc
 limit 1
 ) as _;
+
+
+select ST_ClusterDBSCAN(geometry, eps := 50, minpoints := 1)
+from placex
+group by name;

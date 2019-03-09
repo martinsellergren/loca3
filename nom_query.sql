@@ -128,7 +128,7 @@ select
        array_agg(toImportance(importance, rank_search)) over same_wikipedia
     as importances
 from placex
-where name != ''
+where name->'name' != '' --TODO?
 window same_id as (
        partition by osm_type, osm_id
        order by toImportance(importance, rank_search) desc, place_id
@@ -175,12 +175,25 @@ where
  */
 aux3 as (
 select *,
-       ST_ClusterDBSCAN(geometry, eps := 50, minpoints := 1) over same_name AS cid
-from aux2
---where GeometryType(geometry) = 'LINESTRING'
-window same_name as (
-       partition by unaccent(name)
-       range between unbounded preceding and unbounded following))
+       case when GeometryType(geometry) != 'LINESTRING'
+            then -1 * row_number() over (order by ids) - 1
+            else ST_ClusterDBSCAN(geometry, eps := 0.00015, minpoints := 1)
+                 over same_name_and_geometryType
+       end AS cid
+from aux2 as outerQuery
+window same_name_and_geometryType as (
+       partition by unaccent(name), GeometryType(geometry)))
 
+select name, cid, GeometryType(geometry)
+from aux3
+order by name;
 
-select cid, toWebs(ids) from aux3 order by name;
+-- select cid
+-- from aux3
+-- group by cid
+-- having count(*) > 1;
+
+-- select name, cid, toWebs(ids)
+-- from aux3
+-- where GeometryType(geometry) = 'LINESTRING'
+--  and name = 'Avenida das Naçoes Unidas';
