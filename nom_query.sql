@@ -1,6 +1,8 @@
 create extension if not exists postgis;
 create extension if not exists unaccent;
 
+-------------------------------------------------------FUNCTION DEFS
+
 /**
  * @param1 elems
  * @param2 ids
@@ -85,11 +87,12 @@ $$ language sql;
  * @return Osm webaddresses.
  */
 drop function if exists toWebs;
-create function toWebs(bigint[]) returns text[] as $$
-       select array_agg(toWeb(id))
+create function toWebs(bigint[]) returns text as $$
+       select string_agg(toWeb(id), ', ')
        from unnest($1) as id;
 $$ language sql;
 
+---------------------------------------------------------MAIN QUERYING
 
 /**
  * Partitions with same osm_id, same wikidata and same wikipedia.
@@ -144,8 +147,9 @@ same_wikipedia as (
 
 /**
  * Filter out elems that are most important in all three groups.
- * Pick importance, name from most important elem. Classes, types,
- * geometries etc from all elems in same group (any of them).
+ * Pick importance, name from most important elem. Classes, types etc
+ * from all elems in same group (any of them). Pick one of the
+ * geometries, and pick id to relate to the element of this geometry.
  *
  * Milestone before deduping.
  */
@@ -157,7 +161,7 @@ select
     withUniqueId(types, ids) as types,
     withUniqueId(admin_levels, ids) as admin_levels,
     pickGeometry(geometries, importances) as geometry,
-    withUniqueId(ids, ids) as ids
+    ids[ array_position(geometries, pickGeometry(geometries, importances)) ] as id
 from
     aux1
 where
@@ -165,35 +169,76 @@ where
     same_wikidata_index = 1 and
     same_wikipedia_index = 1),
 
-
 ------------------------------------------------------------DEDUPE
 
 /**
  * Add cluster-index. Clusters of proximate elements with same
  * name. Only dedupe linestrings (i.e not nodes, polygons or
  * multipolygons).
+ *
+ * NOTE: MAX_DEDUPE_DISTANCE (i.e max distance between two same-name
+ * objects for merging them is specified in the ST_ClusterDBSCAN's
+ * eps parameter.
  */
 aux3 as (
 select *,
        case when GeometryType(geometry) != 'LINESTRING'
-            then -1 * row_number() over (order by ids) - 1
-            else ST_ClusterDBSCAN(geometry, eps := 0.00015, minpoints := 1)
+            then -1 * row_number() over (order by id)
+            else ST_ClusterDBSCAN(geometry, eps := 100, minpoints := 1)
                  over same_name_and_geometryType
        end AS cid
 from aux2 as outerQuery
 window same_name_and_geometryType as (
-       partition by unaccent(name), GeometryType(geometry)))
-
-select name, cid, GeometryType(geometry)
-from aux3
-order by name;
+       partition by unaccent(name), GeometryType(geometry))),
 
 -- select cid
 -- from aux3
 -- group by cid
 -- having count(*) > 1;
 
--- select name, cid, toWebs(ids)
+-- select name, cid, toWeb(id)
 -- from aux3
 -- where GeometryType(geometry) = 'LINESTRING'
 --  and name = 'Avenida das Naçoes Unidas';
+
+/**
+ * Aggregate data from same cluster. Importance and name from most
+ * important elem.
+ */
+aux4 as (
+select
+    row_number() over same_cluster as index_in_cluster,
+    (array_agg(importance) over same_cluster)[1] as importance,
+    (array_agg(name) over same_cluster)[1] as name,
+    array_agg(classes) over same_cluster as classes,
+    array_agg(types) over same_cluster as types,
+    array_agg(admin_levels) over same_cluster as admin_levels,
+    array_agg(geometry) over same_cluster as geometries,
+    array_agg(id) over same_cluster as ids
+from aux3
+window same_cluster as (
+       partition by unaccent(name), cid
+       order by importance desc
+       range between unbounded preceding and unbounded following)),
+
+/**
+ * Final fix: unnest data and add popindex.
+ */
+aux5 as (
+select
+    row_number() over (order by importance desc) as popindex,
+    name,
+    classes,
+    types,
+    admin_levels,
+    geometries,
+    ids
+from aux4
+where index_in_cluster = 1
+order by importance desc)
+
+select
+    left(name, 20),
+    toWebs(ids)
+from
+    aux5;
