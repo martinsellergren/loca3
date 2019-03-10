@@ -80,47 +80,32 @@ public class App {
 			     "supercat TEXT NOT NULL, " +
 			     "subcat TEXT NOT NULL, " +
 			     "geometry geometry(Geometry,4326) NOT NULL, " +
-			     "osm_id TEXT UNIQUE NOT NULL)");
+			     "osm_ids TEXT NOT NULL)");
 
         String query = readNomQueryFromFile();
-        ResultSet rs = nomDb.executeQuery(query);
-        long popindex = 0;
+        ResultSet rs = executeNomQuery(query, nomDb);
 
         while (rs.next()) {
-            String name = fixName(rs.getString(1));
-            if (!okName(name)) continue;
-            String[] tagKeys = (String[])rs.getArray(2).getArray();
-            String[] tagValues = (String[])rs.getArray(3).getArray();
-            Short[] adminLevels = (Short[])rs.getArray(4).getArray();
-            PGgeometry[] shapes = toShapes(rs.getArray(5).getArray());
-            String osmId = rs.getString(6) + ":" + rs.getString(7);
+            long popindex = rs.getLong(1);
+            String name = rs.getString(2);
+            String[] tagKeys = rs.getString(3).split(",");
+            String[] tagValues = rs.getString(4).split(",");
+            String[] adminLevels = rs.getString(5).split(",");
+            PGgeometry shape = (PGgeometry)rs.getObject(6);
+            String osmIds = rs.getString(7);
 
             String[] tag = pickTag(tagKeys, tagValues, adminLevels);
             String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], Integer.parseInt(tag[2]));
             String supercat = cats[0];
             String subcat = cats[1];
-            //System.out.format("%s:%s:%s -> %s:%s\n", tag[0], tag[1], tag[2], supercat, subcat);
-            PGgeometry shape = pickShape(shapes);
+            //System.out.format(".%s.%s = %s:%s:%s -> %s:%s\n", popindex, name, tag[0], tag[1], tag[2], supercat, subcat);            
 
 	    String sql = String.format("INSERT INTO elems VALUES " +
-	        		       "(%s, $$%s$$, '%s', '%s', '%s', '%s') " +
-	        		       "ON CONFLICT (osm_id) DO UPDATE SET name = '!!!!!CONFLICT!!!!!'",
-	        		       popindex++, name, supercat, subcat, shape, osmId);
+	        		       "(%s, $$%s$$, '%s', '%s', '%s', '%s')",
+	        		       popindex, name, supercat, subcat, shape, osmIds);
 	    locaDb.executeUpdate(sql);
-            System.out.format("%s %s %s %s\n", name, supercat, subcat, webAddress(osmId));
         }
 	rs.close();
-    }
-
-    /**
-     * @return List of shapes.
-     */
-    private static PGgeometry[] toShapes(Object masterObj) {
-        Object objs[] = (Object[])masterObj;
-        PGgeometry[] shapes = new PGgeometry[objs.length];
-        for (int i = 0; i < objs.length; i++)
-            shapes[i] = (PGgeometry)objs[i];
-        return shapes;
     }
 
     /**
@@ -128,16 +113,19 @@ public class App {
      * @return [key, value, adminLevel]. Admin-level only of interest
      * for specific tags.
      */
-    private static String[] pickTag(String keys[], String values[], Short[] adminLevels) {
+    private static String[] pickTag(String keys[], String values[], String[] adminLevels) {
         int i = 0;
         for (Map.Entry<String, String[]> entry : keyConversionTable.entrySet()) {
             String tableKey = entry.getKey();
             int index = Arrays.asList(keys).indexOf(tableKey);
             if (index != -1) {
-                return new String[]{keys[index], values[index], adminLevels[index]+""};
+                return new String[]{keys[index], values[index], adminLevels[index]};
             }
         }
-        throw new RuntimeException("Dead end");
+        throw new RuntimeException(String.format("Dead end: %s:%s:%s",
+                                                 Arrays.toString(keys),
+                                                 Arrays.toString(values),
+                                                 Arrays.toString(adminLevels)));
     }
 
     /**
@@ -177,35 +165,6 @@ public class App {
         return new String[]{"c", subcat};
     }
 
-    /**
-     * @param shapes Array of different representations of a certain
-     * geo-object, ordered by 'in some sence' importance.
-     * @return Shape picked to represent the object.
-     */
-    private static PGgeometry pickShape(PGgeometry[] shapes) {
-        //TODO smart pick.
-        return shapes[0];
-    }
-
-    /**
-     * @return True if name ok, i.e not emtpy etc.
-     */
-    private static boolean okName(String name) {
-        //TODO?
-	return name != null && name.length() > 1;
-    }
-
-    /**
-     * @return Name fixed, e.g decapitalize if necessary.
-     */
-    private static String fixName(String name) {
-        //TODO
-        return name;
-    }
-
-    private static void dedupeRoads(Statement locaDb) {
-	// TODO
-    }
 
     /**
      * @param area Return elements in this area.
@@ -272,7 +231,6 @@ public class App {
         conn.close();
 
 	conn = DriverManager.getConnection(url + "loca", "martin", "pass");
-	//((org.postgresql.PGConnection)conn).addDataType("geometry", "org.postgis.PGgeometry");
 	st = conn.createStatement();
 	st.execute("CREATE EXTENSION postgis");
 	return st;
@@ -288,9 +246,50 @@ public class App {
 
 	conn.setAutoCommit(false);
 	Statement st = conn.createStatement();
-	st.setFetchSize(50);
+	st.setFetchSize(1000); //this*{row-content-size} ~= ram-usage
 	return st;
     }
+
+    /**
+     * The nom-query defined in the .sql-file contains multiple 
+     * function declarations as well as main query (for convenience
+     * during development). So, extract functions, execute them, 
+     * then execute main query. Add any necessary extensions manually.
+     *
+     * @param query Function definitions, main query etc, 
+     * multiple lines.
+     * @param st Access to nominatim db.
+     * @return Result of running main query.
+     */
+    private static ResultSet executeNomQuery(String query, Statement st) throws SQLException {
+        st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
+        st.execute("CREATE EXTENSION IF NOT EXISTS unaccent");
+        extractAndCreateFunctions(query, st);        
+        return extractAndExecuteMainQuery(query, st);
+    }
+
+    /**
+     * Extract functions in the multi-query and create those in the
+     * nom database.
+     * Format of function defs in query: 
+     * drop function if exists fname; create function fname(..) returns .. as $$ ... $$ language sql;
+     */
+    private static void extractAndCreateFunctions(String query, Statement st) throws SQLException {
+        String pattern = "drop function .* language sql;";
+        Matcher m = Pattern.compile(pattern, Pattern.DOTALL).matcher(query);
+        while (m.find()) st.execute( m.group() );
+    }
+
+    /**
+     * Extract main query in multi-query and execute.
+     * Format: ---MAIN QUERY ...end
+     */
+    private static ResultSet extractAndExecuteMainQuery(String query, Statement st) throws SQLException {
+        query = query.replaceFirst("(?s).*---MAIN QUERY", "");
+        return st.executeQuery(query);
+    }
+
+    
 
     private static void testGeom(Statement st, String table) throws SQLException {
 	ResultSet r = st.executeQuery("SELECT geometry,name FROM " + table);
@@ -373,7 +372,7 @@ public class App {
     private static String readNomQueryFromFile() {
         List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
         StringBuilder sb = new StringBuilder();
-        for (String x : xs) sb.append(x + " ");
+        for (String x : xs) sb.append(x + "\n");
         return sb.toString();
     }
 }

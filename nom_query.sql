@@ -1,6 +1,7 @@
 create extension if not exists postgis;
 create extension if not exists unaccent;
 
+
 -------------------------------------------------------FUNCTION DEFS
 
 /**
@@ -10,7 +11,7 @@ create extension if not exists unaccent;
  * Returns elems with unique ids, ordered by id.
  */
 drop function if exists withUniqueId;
-create function withUniqueId(anyarray, bigint[]) returns anyarray as $$
+create function withUniqueId(anyarray, text[]) returns anyarray as $$
        with elems as (
        select (array_agg(elem))[1] as elem, id
        from unnest($1, $2) as t(elem, id)
@@ -59,27 +60,20 @@ $$ language sql;
  * @return osm_id * 10 + 0/1/2(node/way/relation)
  */
 drop function if exists toId;
-create function toId(character(1), bigint) returns bigint as $$
-       select $2 * 10 +
-              (case when $1='N' then 0
-                   when $1='W' then 1
-                   else 2
-              end);
+create function toId(character(1), bigint) returns text as $$
+       select case when $1 = 'N' then 'node'
+                   when $1 = 'W' then 'way'
+                   else 'relation'
+              end || '/' || $2;
 $$ language sql;
 
 /**
- * @param1 id
+ * @param1 id (node/way/relation)/id
  * @return Osm webaddress of element with specified id.
  */
 drop function if exists toWeb;
-create function toWeb(bigint) returns text as $$
-       select
-        'https://www.openstreetmap.org/' ||
-           case when $1 % 10 = 0 then 'node'
-                when $1 % 10 = 1 then 'way'
-                else 'relation'
-           end
-           || '/' || $1 / 10;
+create function toWeb(text) returns text as $$
+       select 'https://www.openstreetmap.org/' || $1;
 $$ language sql;
 
 /**
@@ -87,12 +81,12 @@ $$ language sql;
  * @return Osm webaddresses.
  */
 drop function if exists toWebs;
-create function toWebs(bigint[]) returns text as $$
+create function toWebs(text[]) returns text as $$
        select string_agg(toWeb(id), ', ')
        from unnest($1) as id;
 $$ language sql;
 
----------------------------------------------------------MAIN QUERYING
+---------------------------------------------------------MAIN QUERY
 
 /**
  * Partitions with same osm_id, same wikidata and same wikipedia.
@@ -203,7 +197,7 @@ window same_name_and_geometryType as (
 
 /**
  * Aggregate data from same cluster. Importance and name from most
- * important elem.
+ * important elem. Geometries collected into a singel geometry.
  */
 aux4 as (
 select
@@ -213,7 +207,7 @@ select
     array_agg(classes) over same_cluster as classes,
     array_agg(types) over same_cluster as types,
     array_agg(admin_levels) over same_cluster as admin_levels,
-    array_agg(geometry) over same_cluster as geometries,
+    ST_Union(geometry) over same_cluster as geometry,
     array_agg(id) over same_cluster as ids
 from aux3
 window same_cluster as (
@@ -228,17 +222,15 @@ aux5 as (
 select
     row_number() over (order by importance desc) as popindex,
     name,
-    classes,
-    types,
-    admin_levels,
-    geometries,
-    ids
+    array_to_string(classes, ',') as classes,
+    array_to_string(types, ',') as types,
+    array_to_string(admin_levels, ',') as admin_levels,
+    geometry,
+    array_to_string(ids, ',') as ids
 from aux4
 where index_in_cluster = 1
 order by importance desc)
 
-select
-    left(name, 20),
-    toWebs(ids)
-from
-    aux5;
+
+select *
+from aux5;
