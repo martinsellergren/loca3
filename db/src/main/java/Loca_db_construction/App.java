@@ -1,3 +1,4 @@
+// * Head
 /*
  * For creating the loca db. Source is an existing nominatim db.
  *
@@ -7,6 +8,7 @@
  */
 package Loca_db_construction;
 
+// * Imports
 import java.sql.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -23,9 +25,11 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+// * Declarations
+
 public class App {
 
-    // 0en 1sv 2sp
+    // 0en 1sv 2sp. TODO
     public static final int LANGUAGE = 0;
 
     /**
@@ -41,13 +45,14 @@ public class App {
         keyValueConversionTable = loadKeyValueConversionTable(keyConversionTable);
     }
 
+// * Main
+
     public static void main(String[] args) throws SQLException {
 	Statement nomDb = connectToNomDb();
 	//testGeom(nomDb, "placex");
 
 	Statement locaDb = createLocaDb();
 	fillLocaDb(nomDb, locaDb);
-	//dedupeRoads(locaDb);
 	//testGeom(locaDb, "elems");
 
 	// List<double[]> area = new ArrayList<>();
@@ -60,10 +65,11 @@ public class App {
 
 	// queryLocaDb(locaDb, area, popindex);
 
-	locaDb.close();
 	nomDb.close();
+	locaDb.close();
     }
 
+// * Fill loca
     /**
      * Process data in nominatim-db and insert into loca-db.
      * Nom-db may contain multile elements for same osm-object:
@@ -98,7 +104,7 @@ public class App {
             String[] cats = tagToSuperAndSubCategory(tag[0], tag[1], Integer.parseInt(tag[2]));
             String supercat = cats[0];
             String subcat = cats[1];
-            //System.out.format(".%s.%s = %s:%s:%s -> %s:%s\n", popindex, name, tag[0], tag[1], tag[2], supercat, subcat);            
+            //System.out.format(".%s.%s = %s:%s:%s -> %s:%s\n", popindex, name, tag[0], tag[1], tag[2], supercat, subcat);
 
 	    String sql = String.format("INSERT INTO elems VALUES " +
 	        		       "(%s, $$%s$$, '%s', '%s', '%s', '%s')",
@@ -165,58 +171,7 @@ public class App {
         return new String[]{"c", subcat};
     }
 
-
-    /**
-     * @param area Return elements in this area.
-     * @param popindexLimit Return elements with popindex larger than this.
-     * @param count Number of elements to return.
-     *
-     * @return Geo-objects inside area, [lon lat]
-     */
-    public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindexLimit) throws SQLException {
-	String sql = String.format("SELECT * FROM elems WHERE ST_Intersects(geometry, 'SRID=4326;%s') AND popindex > %s",
-				   polystr(area), popindexLimit);
-	ResultSet rs = st.executeQuery(sql);
-
-	while (rs.next()) {
-	    long popindex = rs.getLong(1);
-	    String name = rs.getString(2);
-	    String supercat = rs.getString(3);
-	    String subcat = rs.getString(4);
-	    PGgeometry shape = (PGgeometry)rs.getObject(5);
-	    String osmId = rs.getString(6);
-
-	    System.out.printf("%s. %s. %s. %s. %s\n",
-			      popindex, name, supercat, subcat, webAddress(osmId));
-	}
-
-	return null;
-    }
-
-    /**
-     * @param ns [lon lat]
-     * @return "POLYGON((lon lat,lon lat,lon lat,...))"
-     */
-    private static String polystr(List<double[]> ns) {
-	StringBuilder sb = new StringBuilder();
-
-	for (double[] n : ns) {
-	    sb.append(String.format("%s %s,", n[0], n[1]));
-	}
-
-	String str = sb.toString();
-	return "POLYGON((" + str.substring(0, str.length()-1) + "))";
-    }
-
-    /**
-     * @return Web address to osm-element.
-     */
-    private static String webAddress(String osmId) {
-	String type = osmId.split(":")[0];
-	String id = osmId.split(":")[1];
-	type = type.equals("N") ? "node" : (type.equals("W") ? "way" : "relation");
-	return String.format("https://www.openstreetmap.org/%s/%s", type, id);
-    }
+// * Create/ connect to db
 
     /**
      * Create a new postgis db named loca. Remove if exists.
@@ -250,13 +205,15 @@ public class App {
 	return st;
     }
 
+// * Query nom
+
     /**
-     * The nom-query defined in the .sql-file contains multiple 
+     * The nom-query defined in the .sql-file contains multiple
      * function declarations as well as main query (for convenience
-     * during development). So, extract functions, execute them, 
+     * during development). So, extract functions, execute them,
      * then execute main query. Add any necessary extensions manually.
      *
-     * @param query Function definitions, main query etc, 
+     * @param query Function definitions, main query etc,
      * multiple lines.
      * @param st Access to nominatim db.
      * @return Result of running main query.
@@ -264,14 +221,14 @@ public class App {
     private static ResultSet executeNomQuery(String query, Statement st) throws SQLException {
         st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
         st.execute("CREATE EXTENSION IF NOT EXISTS unaccent");
-        extractAndCreateFunctions(query, st);        
+        extractAndCreateFunctions(query, st);
         return extractAndExecuteMainQuery(query, st);
     }
 
     /**
      * Extract functions in the multi-query and create those in the
      * nom database.
-     * Format of function defs in query: 
+     * Format of function defs in query:
      * drop function if exists fname; create function fname(..) returns .. as $$ ... $$ language sql;
      */
     private static void extractAndCreateFunctions(String query, Statement st) throws SQLException {
@@ -282,29 +239,14 @@ public class App {
 
     /**
      * Extract main query in multi-query and execute.
-     * Format: ---MAIN QUERY ...end
+     * Format: -- * QUERY ...end
      */
-    private static ResultSet extractAndExecuteMainQuery(String query, Statement st) throws SQLException {
-        query = query.replaceFirst("(?s).*---MAIN QUERY", "");
+     private static ResultSet extractAndExecuteMainQuery(String query, Statement st) throws SQLException {
+        query = query.replaceFirst("(?s).*-- \\* QUERY", "");
         return st.executeQuery(query);
     }
 
-    
-
-    private static void testGeom(Statement st, String table) throws SQLException {
-	ResultSet r = st.executeQuery("SELECT geometry,name FROM " + table);
-
-	while(r.next()) {
-	    /*
-	     * Retrieve the geometry as an object then cast it to the geometry type.
-	     * Print things out.
-	     */
-	    PGgeometry geom = (PGgeometry)r.getObject(1);
-	    String name = r.getString(2);
-	    System.out.println(name + ". " + geom);
-	}
-	st.close();
-    }
+// * Key,value -> tag conversion
 
     /**
      * Load key-conversion-table into an ORDERED map.
@@ -352,6 +294,19 @@ public class App {
     }
 
     /**
+     * @return Query for extracting data from nom-db.
+     */
+    private static String readNomQueryFromFile() {
+        List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
+        StringBuilder sb = new StringBuilder();
+        for (String x : xs) sb.append(x + "\n");
+        return sb.toString();
+    }
+
+
+    // * Utils
+
+    /**
      * @return File-text.
      */
     private static List<String> readFile(String path) {
@@ -366,13 +321,47 @@ public class App {
         }
     }
 
+    // * Query loca
+
     /**
-     * @return Query for extracting data from nom-db.
+     * @param area Return elements in this area.
+     * @param popindexLimit Return elements with popindex larger than this.
+     * @param count Number of elements to return.
+     *
+     * @return Geo-objects inside area, [lon lat]
      */
-    private static String readNomQueryFromFile() {
-        List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
-        StringBuilder sb = new StringBuilder();
-        for (String x : xs) sb.append(x + "\n");
-        return sb.toString();
+    public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindexLimit) throws SQLException {
+	String sql = String.format("SELECT * FROM elems WHERE ST_Intersects(geometry, 'SRID=4326;%s') AND popindex > %s",
+				   polystr(area), popindexLimit);
+	ResultSet rs = st.executeQuery(sql);
+
+	while (rs.next()) {
+	    long popindex = rs.getLong(1);
+	    String name = rs.getString(2);
+	    String supercat = rs.getString(3);
+	    String subcat = rs.getString(4);
+	    PGgeometry shape = (PGgeometry)rs.getObject(5);
+	    String osmId = rs.getString(6);
+
+	    // System.out.printf("%s. %s. %s. %s. %s\n",
+	    //     	      popindex, name, supercat, subcat, webAddress(osmId));
+	}
+
+	return null;
+    }
+
+    /**
+     * @param ns [lon lat]
+     * @return "POLYGON((lon lat,lon lat,lon lat,...))"
+     */
+    private static String polystr(List<double[]> ns) {
+	StringBuilder sb = new StringBuilder();
+
+	for (double[] n : ns) {
+	    sb.append(String.format("%s %s,", n[0], n[1]));
+	}
+
+	String str = sb.toString();
+	return "POLYGON((" + str.substring(0, str.length()-1) + "))";
     }
 }

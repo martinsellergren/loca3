@@ -9,6 +9,7 @@ railway c
 shop c
 mountain_pass c
 waterway c
+boundary c
 place c
 emergency c
 craft c
@@ -21,6 +22,5 @@ tourism c
 man_made c
 military c
 natural n
-boundary c
 landuse c
 historic c

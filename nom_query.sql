@@ -2,7 +2,7 @@ create extension if not exists postgis;
 create extension if not exists unaccent;
 
 
--------------------------------------------------------FUNCTION DEFS
+-- * FUNCTION DEFS
 
 /**
  * @param1 elems
@@ -86,7 +86,8 @@ create function toWebs(text[]) returns text as $$
        from unnest($1) as id;
 $$ language sql;
 
----------------------------------------------------------MAIN QUERY
+
+-- * QUERY
 
 /**
  * Partitions with same osm_id, same wikidata and same wikipedia.
@@ -163,7 +164,7 @@ where
     same_wikidata_index = 1 and
     same_wikipedia_index = 1),
 
-------------------------------------------------------------DEDUPE
+-- ** DEDUPE
 
 /**
  * Add cluster-index. Clusters of proximate elements with same
