@@ -33,6 +33,10 @@ public class App {
     public static final int LANGUAGE = 0;
 
     /**
+     * this * {row-content-size} ~= ram-usage. Used by nom-db query. */
+    private static final int DB_FETCH_SIZE = 1000;
+
+    /**
      * key -> [super-cat(c/n/r), sub-cat] */
     private static Map<String,String[]> keyConversionTable;
 
@@ -49,21 +53,18 @@ public class App {
 
     public static void main(String[] args) throws SQLException {
 	Statement nomDb = connectToNomDb();
-	//testGeom(nomDb, "placex");
+	//createLocaDb();
+        Statement locaDb = connectToLocaDb();
+	//fillLocaDb(nomDb, locaDb);
 
-	Statement locaDb = createLocaDb();
-	fillLocaDb(nomDb, locaDb);
-	//testGeom(locaDb, "elems");
-
-	// List<double[]> area = new ArrayList<>();
-	// area.add(new double[]{-12.4993515, -37.4106643});
-	// area.add(new double[]{-12.5110245, -37.4398378});
-	// area.add(new double[]{-12.4567795, -37.4376570});
-	// area.add(new double[]{-12.4545479, -37.3966189});
-	// area.add(new double[]{-12.4993515, -37.4106643});
-	// long popindex = 100;
-
-	// queryLocaDb(locaDb, area, popindex);
+	List<double[]> area = new ArrayList<>();
+	area.add(new double[]{-12.4993515, -37.4106643});
+	area.add(new double[]{-12.5110245, -37.4398378});
+	area.add(new double[]{-12.4567795, -37.4376570});
+	area.add(new double[]{-12.4545479, -37.3966189});
+	area.add(new double[]{-12.4993515, -37.4106643});
+	long popindex = 100;
+	queryLocaDb(locaDb, area, popindex);
 
 	nomDb.close();
 	locaDb.close();
@@ -80,6 +81,7 @@ public class App {
      * - super- and sub-category from conversion-tables (based on tagging)
      */
     private static void fillLocaDb(Statement nomDb, Statement locaDb) throws SQLException {
+        locaDb.execute("CREATE EXTENSION IF NOT EXISTS postgis");
 	locaDb.executeUpdate("CREATE TABLE elems (" +
 			     "popindex BIGINT PRIMARY KEY, " +
 			     "name TEXT NOT NULL, " +
@@ -176,18 +178,24 @@ public class App {
     /**
      * Create a new postgis db named loca. Remove if exists.
      */
-    private static Statement createLocaDb() throws SQLException {
-	String url = "jdbc:postgresql://localhost/";
-	Connection conn = DriverManager.getConnection(url + "nominatim", "martin", "pass");
+    private static void createLocaDb() throws SQLException {
+	String url = "jdbc:postgresql://localhost/nominatim";
+	Connection conn = DriverManager.getConnection(url, "martin", "pass");
 	Statement st = conn.createStatement();
         st.execute("DROP DATABASE IF EXISTS loca");
 	st.execute("CREATE DATABASE loca");
         st.close();
         conn.close();
+    }
 
-	conn = DriverManager.getConnection(url + "loca", "martin", "pass");
-	st = conn.createStatement();
-	st.execute("CREATE EXTENSION postgis");
+    /**
+     * Connect to existing loca db.
+     * @return Handle to manipulate db.
+     */
+    private static Statement connectToLocaDb() throws SQLException {
+        String url = "jdbc:postgresql://localhost/loca";
+	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	Statement st = conn.createStatement();
 	return st;
     }
 
@@ -198,10 +206,9 @@ public class App {
     private static Statement connectToNomDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
-
-	conn.setAutoCommit(false);
 	Statement st = conn.createStatement();
-	st.setFetchSize(1000); //this*{row-content-size} ~= ram-usage
+	conn.setAutoCommit(false);
+	st.setFetchSize(DB_FETCH_SIZE);
 	return st;
     }
 
@@ -321,7 +328,7 @@ public class App {
         }
     }
 
-    // * Query loca
+// * Query loca
 
     /**
      * @param area Return elements in this area.
@@ -331,7 +338,7 @@ public class App {
      * @return Geo-objects inside area, [lon lat]
      */
     public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindexLimit) throws SQLException {
-	String sql = String.format("SELECT * FROM elems WHERE ST_Intersects(geometry, 'SRID=4326;%s') AND popindex > %s",
+	String sql = String.format("SELECT * FROM elems WHERE /* ST_Intersects(geometry, 'SRID=4326;%s') AND */ popindex > %s order by popindex desc",
 				   polystr(area), popindexLimit);
 	ResultSet rs = st.executeQuery(sql);
 
@@ -343,8 +350,8 @@ public class App {
 	    PGgeometry shape = (PGgeometry)rs.getObject(5);
 	    String osmId = rs.getString(6);
 
-	    // System.out.printf("%s. %s. %s. %s. %s\n",
-	    //     	      popindex, name, supercat, subcat, webAddress(osmId));
+	    System.out.printf("%s. %s. %s. %s. %s\n",
+	        	      popindex, name, supercat, subcat, osmId);
 	}
 
 	return null;
