@@ -236,6 +236,19 @@ from elems
 window same_names as (
        partition by name order by popindex);
 
+
+
+
+
+select
+    left(name->'name',30),
+    GeometryType(geometry),
+    pg_typeof(ST_Intersects(geometry, 'SRID=4326;POLYGON((6.4071253 0.4696603,6.2251096 -0.1675413,6.7856924 -0.0137329,7.0137726 0.4669138,6.4071253 0.4696603))')),
+    ST_Area(ST_Intersection(geometry, 'SRID=4326;POLYGON((6.4071253 0.4696603,6.2251096 -0.1675413,6.7856924 -0.0137329,7.0137726 0.4669138,6.4071253 0.4696603))')),
+    GeometryType(ST_Intersection(geometry, 'SRID=4326;POLYGON((6.4071253 0.4696603,6.2251096 -0.1675413,6.7856924 -0.0137329,7.0137726 0.4669138,6.4071253 0.4696603))'))
+from
+    placex;
+
 --------------------------------------------------------------other
 
 drop function if exists withUniqueId;
@@ -284,3 +297,27 @@ limit 1
 select ST_ClusterDBSCAN(geometry, eps := 50, minpoints := 1)
 from placex
 group by name;
+
+select ST_Area(geometry) from elems where GeometryType(geometry) = 'MULTILINESTRING';
+
+
+
+SELECT
+    popindex,
+    name,
+    supercat,
+    subcat,
+    osm_ids,
+    GeometryType(geometry)
+FROM
+    elems
+WHERE
+    popindex > 0 AND
+    ST_Intersects(geometry, 'SRID=4326;POLYGON((6.4071253 0.4696603,6.2251096 -0.1675413,6.7856924 -0.0137329,7.0137726 0.4669138,6.4071253 0.4696603))') AND
+    case
+        when GeometryType(geometry) in ('POLYGON', 'MULTIPOLYGON') then
+             ST_Area(ST_Intersection(geometry, 'SRID=4326;POLYGON((6.4071253 0.4696603,6.2251096 -0.1675413,6.7856924 -0.0137329,7.0137726 0.4669138,6.4071253 0.4696603))')) / ST_Area(geometry) >= 0.5
+        else TRUE
+    end
+order by popindex
+limit 100;

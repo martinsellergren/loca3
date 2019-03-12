@@ -58,12 +58,18 @@ public class App {
 	//fillLocaDb(nomDb, locaDb);
 
 	List<double[]> area = new ArrayList<>();
-	area.add(new double[]{-12.4993515, -37.4106643});
-	area.add(new double[]{-12.5110245, -37.4398378});
-	area.add(new double[]{-12.4567795, -37.4376570});
-	area.add(new double[]{-12.4545479, -37.3966189});
-	area.add(new double[]{-12.4993515, -37.4106643});
-	long popindex = 100;
+        area.add(new double[]{6.4071253, 0.4696603});
+        area.add(new double[]{6.2251096, -0.1675413});
+        area.add(new double[]{6.7856924, -0.0137329});
+        area.add(new double[]{7.0137726, 0.4669138});
+        area.add(new double[]{6.4071253, 0.4696603});
+
+        // area.add(new double[]{6.4071253, 0.4696603});
+        // area.add(new double[]{6.3061935, 0.0521851});
+        // area.add(new double[]{6.7856924, -0.0137329});
+        // area.add(new double[]{7.0137726, 0.4669138});
+        // area.add(new double[]{6.4071253, 0.4696603});
+	long popindex = 0;
 	queryLocaDb(locaDb, area, popindex);
 
 	nomDb.close();
@@ -171,6 +177,16 @@ public class App {
         case 9: subcat = "city district";
         }
         return new String[]{"c", subcat};
+    }
+
+    /**
+     * @return Query for extracting data from nom-db.
+     */
+    private static String readNomQueryFromFile() {
+        List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
+        StringBuilder sb = new StringBuilder();
+        for (String x : xs) sb.append(x + "\n");
+        return sb.toString();
     }
 
 // * Create/ connect to db
@@ -300,17 +316,6 @@ public class App {
         return table;
     }
 
-    /**
-     * @return Query for extracting data from nom-db.
-     */
-    private static String readNomQueryFromFile() {
-        List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
-        StringBuilder sb = new StringBuilder();
-        for (String x : xs) sb.append(x + "\n");
-        return sb.toString();
-    }
-
-
     // * Utils
 
     /**
@@ -338,8 +343,10 @@ public class App {
      * @return Geo-objects inside area, [lon lat]
      */
     public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindexLimit) throws SQLException {
-	String sql = String.format("SELECT * FROM elems WHERE /* ST_Intersects(geometry, 'SRID=4326;%s') AND */ popindex > %s order by popindex desc",
-				   polystr(area), popindexLimit);
+        int NO_QUIZ_ELEMS = 10;
+
+	String sql = readLocaQueryFromFile();
+        sql = String.format(sql, popindexLimit, polystr(area), NO_QUIZ_ELEMS);
 	ResultSet rs = st.executeQuery(sql);
 
 	while (rs.next()) {
@@ -348,27 +355,36 @@ public class App {
 	    String supercat = rs.getString(3);
 	    String subcat = rs.getString(4);
 	    PGgeometry shape = (PGgeometry)rs.getObject(5);
-	    String osmId = rs.getString(6);
+	    String osmIds = rs.getString(6);
 
 	    System.out.printf("%s. %s. %s. %s. %s\n",
-	        	      popindex, name, supercat, subcat, osmId);
+	        	      popindex, name, supercat, subcat, osmIds);
 	}
 
 	return null;
     }
 
     /**
+     * Format for postgis.
      * @param ns [lon lat]
-     * @return "POLYGON((lon lat,lon lat,lon lat,...))"
+     * @return "SRID=4326;POLYGON((lon lat,lon lat,lon lat,...))"
      */
     private static String polystr(List<double[]> ns) {
 	StringBuilder sb = new StringBuilder();
-
-	for (double[] n : ns) {
+	for (double[] n : ns)
 	    sb.append(String.format("%s %s,", n[0], n[1]));
-	}
 
 	String str = sb.toString();
-	return "POLYGON((" + str.substring(0, str.length()-1) + "))";
+	return "SRID=4326;POLYGON((" + str.substring(0, str.length()-1) + "))";
+    }
+
+    /**
+     * @return Query for extracting data from nom-db.
+     */
+    private static String readLocaQueryFromFile() {
+        List<String> xs = readFile("/home/martin/loca3/loca3/loca_query.sql");
+        StringBuilder sb = new StringBuilder();
+        for (String x : xs) sb.append(x + "\n");
+        return sb.toString();
     }
 }
