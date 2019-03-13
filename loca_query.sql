@@ -14,7 +14,7 @@ WHERE
     ST_Intersects(geometry, '%2$s') AND
     case
         when GeometryType(geometry) in ('POLYGON', 'MULTIPOLYGON') then
-             ST_Area(ST_Intersection(geometry, '%2$s')) / ST_Area(geometry) >= 0.5
+             ST_Area(ST_Intersection(geometry, '%2$s')) / area >= 0.5
         else TRUE
     end
 order by popindex

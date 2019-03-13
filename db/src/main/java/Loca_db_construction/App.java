@@ -53,9 +53,9 @@ public class App {
 
     public static void main(String[] args) throws SQLException {
 	Statement nomDb = connectToNomDb();
-	//createLocaDb();
-        Statement locaDb = connectToLocaDb();
-	//fillLocaDb(nomDb, locaDb);
+	Statement locaDb = createLocaDb();
+	fillLocaDb(nomDb, locaDb);
+        //Statement locaDb = connectToLocaDb();
 
 	List<double[]> area = new ArrayList<>();
         area.add(new double[]{6.4071253, 0.4696603});
@@ -87,15 +87,6 @@ public class App {
      * - super- and sub-category from conversion-tables (based on tagging)
      */
     private static void fillLocaDb(Statement nomDb, Statement locaDb) throws SQLException {
-        locaDb.execute("CREATE EXTENSION IF NOT EXISTS postgis");
-	locaDb.executeUpdate("CREATE TABLE elems (" +
-			     "popindex BIGINT PRIMARY KEY, " +
-			     "name TEXT NOT NULL, " +
-			     "supercat TEXT NOT NULL, " +
-			     "subcat TEXT NOT NULL, " +
-			     "geometry geometry(Geometry,4326) NOT NULL, " +
-			     "osm_ids TEXT NOT NULL)");
-
         String query = readNomQueryFromFile();
         ResultSet rs = executeNomQuery(query, nomDb);
 
@@ -115,8 +106,8 @@ public class App {
             //System.out.format(".%s.%s = %s:%s:%s -> %s:%s\n", popindex, name, tag[0], tag[1], tag[2], supercat, subcat);
 
 	    String sql = String.format("INSERT INTO elems VALUES " +
-	        		       "(%s, $$%s$$, '%s', '%s', '%s', '%s')",
-	        		       popindex, name, supercat, subcat, shape, osmIds);
+	        		       "(%s, $$%s$$, '%s', '%s', '%s', ST_AREA('%s'), '%s')",
+	        		       popindex, name, supercat, subcat, shape, shape, osmIds);
 	    locaDb.executeUpdate(sql);
         }
 	rs.close();
@@ -193,8 +184,9 @@ public class App {
 
     /**
      * Create a new postgis db named loca. Remove if exists.
+     * @return Handle to manipulate db.
      */
-    private static void createLocaDb() throws SQLException {
+    private static Statement createLocaDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
 	Statement st = conn.createStatement();
@@ -202,6 +194,20 @@ public class App {
 	st.execute("CREATE DATABASE loca");
         st.close();
         conn.close();
+
+        st = connectToLocaDb();
+        st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
+	st.executeUpdate("CREATE TABLE elems (" +
+                         "popindex BIGINT PRIMARY KEY, " +
+                         "name TEXT NOT NULL, " +
+                         "supercat TEXT NOT NULL, " +
+                         "subcat TEXT NOT NULL, " +
+                         "geometry geometry(Geometry,4326) NOT NULL, " +
+                         "area DOUBLE PRECISION NOT NULL, " +
+                         "osm_ids TEXT NOT NULL)");
+        st.execute("CREATE INDEX ON elems USING GIST (geometry)");
+        st.execute("VACUUM ANALYZE");
+        return st;
     }
 
     /**
@@ -211,8 +217,7 @@ public class App {
     private static Statement connectToLocaDb() throws SQLException {
         String url = "jdbc:postgresql://localhost/loca";
 	Connection conn = DriverManager.getConnection(url, "martin", "pass");
-	Statement st = conn.createStatement();
-	return st;
+	return conn.createStatement();
     }
 
     /**
