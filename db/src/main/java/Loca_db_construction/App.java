@@ -52,6 +52,7 @@ public class App {
 // * Main
 
     public static void main(String[] args) throws SQLException {
+        try {
 	Statement nomDb = connectToNomDb();
 	Statement locaDb = createLocaDb();
 	fillLocaDb(nomDb, locaDb);
@@ -74,6 +75,11 @@ public class App {
 
 	nomDb.close();
 	locaDb.close();
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
     }
 
 // * Fill loca
@@ -173,8 +179,8 @@ public class App {
     /**
      * @return Query for extracting data from nom-db.
      */
-    private static String readNomQueryFromFile() {
-        List<String> xs = readFile("/home/martin/loca3/loca3/nom_query.sql");
+    public static String readNomQueryFromFile() {
+        List<String> xs = readFile("../nom_query.sql");
         StringBuilder sb = new StringBuilder();
         for (String x : xs) sb.append(x + "\n");
         return sb.toString();
@@ -246,7 +252,7 @@ public class App {
      * @param st Access to nominatim db.
      * @return Result of running main query.
      */
-    private static ResultSet executeNomQuery(String query, Statement st) throws SQLException {
+    public static ResultSet executeNomQuery(String query, Statement st) throws SQLException {
         st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
         st.execute("CREATE EXTENSION IF NOT EXISTS unaccent");
         extractAndCreateFunctions(query, st);
@@ -281,7 +287,7 @@ public class App {
      */
     private static Map<String, String[]> loadKeyConversionTable() {
         Map<String, String[]> table = new LinkedHashMap<>();
-        List<String> entries = readFile("/home/martin/loca3/loca3/tag-to-category-conversion/key-conversion-table");
+        List<String> entries = readFile("../tag-to-category-conversion/key-conversion-table");
         entries = entries.subList(1, entries.size());
 
         for (String entry : entries) {
@@ -303,7 +309,7 @@ public class App {
      */
     private static Map<String, String[]> loadKeyValueConversionTable(Map<String, String[]> keyConvTable) {
         Map<String, String[]> table = new HashMap<>();
-        List<String> entries = readFile("/home/martin/loca3/loca3/tag-to-category-conversion/key-value-conversion-table");
+        List<String> entries = readFile("../tag-to-category-conversion/key-value-conversion-table");
         entries = entries.subList(1, entries.size());
 
         for (String entry :  entries) {
@@ -387,7 +393,7 @@ public class App {
      * @return Query for extracting data from nom-db.
      */
     private static String readLocaQueryFromFile() {
-        List<String> xs = readFile("/home/martin/loca3/loca3/loca_query.sql");
+        List<String> xs = readFile("../loca_query.sql");
         StringBuilder sb = new StringBuilder();
         for (String x : xs) sb.append(x + "\n");
         return sb.toString();

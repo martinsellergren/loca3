@@ -3,6 +3,7 @@ Refractored sql-query and improved.
 Cleaver query; almost every processing for loca-db done by postgres.
 TODO: dedupe roads using postgres. Have draft.
 
+
 * 3/3
  Parque Natural Ôbo d | W        |  298565114 | en:Obo Natural Park               | en:Obo_Natural_Park
  Parque Natural Ôbo d | R        |    4109839 | en:Obo Natural Park               | en:Obo_Natural_Park
