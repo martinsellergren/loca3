@@ -52,7 +52,6 @@ public class App {
 // * Main
 
     public static void main(String[] args) throws SQLException {
-        try {
 	Statement nomDb = connectToNomDb();
 	Statement locaDb = createLocaDb();
 	fillLocaDb(nomDb, locaDb);
@@ -75,14 +74,10 @@ public class App {
 
 	nomDb.close();
 	locaDb.close();
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
     }
 
 // * Fill loca
+
     /**
      * Process data in nominatim-db and insert into loca-db.
      * Nom-db may contain multile elements for same osm-object:
@@ -92,7 +87,7 @@ public class App {
      * - popindex: increasing with popularity
      * - super- and sub-category from conversion-tables (based on tagging)
      */
-    private static void fillLocaDb(Statement nomDb, Statement locaDb) throws SQLException {
+    public static void fillLocaDb(Statement nomDb, Statement locaDb) throws SQLException {
         String query = readNomQueryFromFile();
         ResultSet rs = executeNomQuery(query, nomDb);
 
@@ -179,7 +174,7 @@ public class App {
     /**
      * @return Query for extracting data from nom-db.
      */
-    public static String readNomQueryFromFile() {
+    private static String readNomQueryFromFile() {
         List<String> xs = readFile("../nom_query.sql");
         StringBuilder sb = new StringBuilder();
         for (String x : xs) sb.append(x + "\n");
@@ -252,7 +247,7 @@ public class App {
      * @param st Access to nominatim db.
      * @return Result of running main query.
      */
-    public static ResultSet executeNomQuery(String query, Statement st) throws SQLException {
+    private static ResultSet executeNomQuery(String query, Statement st) throws SQLException {
         st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
         st.execute("CREATE EXTENSION IF NOT EXISTS unaccent");
         extractAndCreateFunctions(query, st);
@@ -353,7 +348,7 @@ public class App {
      *
      * @return Geo-objects inside area, [lon lat]
      */
-    public static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindexLimit) throws SQLException {
+    private static List<GeoObject> queryLocaDb(Statement st, List<double[]> area, long popindexLimit) throws SQLException {
         int NO_QUIZ_ELEMS = 10;
 
 	String sql = readLocaQueryFromFile();

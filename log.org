@@ -1,3 +1,6 @@
+* 4/4
+TODO: Undersök wikipedia-taggen och wikidata.. Ibland wikidata i extratags, ibland i wikipedia? Se Östermalm: osm. 27527229, 'N'
+
 * 5/3
 Refractored sql-query and improved.
 Cleaver query; almost every processing for loca-db done by postgres.
