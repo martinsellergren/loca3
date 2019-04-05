@@ -169,7 +169,7 @@ where
 /**
  * Add cluster-index. Clusters of proximate elements with same
  * name. Only dedupe linestrings (i.e not nodes, polygons or
- * multipolygons).
+ * multipolygons..).
  *
  * NOTE: MAX_DEDUPE_DISTANCE (i.e max distance between two same-name
  * objects for merging them is specified in the ST_ClusterDBSCAN's

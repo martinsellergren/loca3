@@ -1,5 +1,5 @@
 /*
- * Test the nom_query. Create the db with some elems, run the query, evaluate result, repeate.
+ * Test the process of transfer data from nom to loca db.
  */
 package Loca_db_construction;
 
@@ -20,14 +20,24 @@ public class AppTest {
     @Test
     public void emptyNomDb() throws SQLException {
         App.fillLocaDb(nomTestDb, locaTestDb);
-        ResultSet rs = locaTestDb.executeQuery("select count(*) from elems");
-        rs.next();
-        int size = rs.getInt(1);
-        assertEquals(0, size);
+        assertEquals(0, locaSize());
     }
 
     @Test
     public void singleElement() throws SQLException {
+        long place_id = 103698;
+        double importance = 0;
+        int rank_search = 20;
+        long osm_id = 27527229;
+        char oms_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        String name = "Östermalm";
+        int admin_level = 15;
+        String extratags_wikidata = "Q29024431";
+        String extratags_wikipedia = "sv:Östermalm, Västerås";
+        List<double[]> geometry = null;
+        String wikipedia = "sv:Östermalm,_Västerås";
         nomInsert(103698, 0, 20, 27527229, 'N', "place", "suburb", "Östermalm", 15, "Q29024431", "sv:Östermalm, Västerås", null, "sv:Östermalm,_Västerås");
         App.fillLocaDb(nomTestDb, locaTestDb);
 
@@ -45,11 +55,10 @@ public class AppTest {
         return rs.getInt(1);
     }
 
-
     /**
-     * @param osm_type N/W/R
+     * Insert specified elems in nom test db. Other column than specified by parameters set to NULL.
      */
-    private static void nomInsert(int place_id, double importance, double rank_search, long osm_id, char osm_type, String class_, String type, String name, int admin_level, String extratags_wikidata, String extratags_wikipedia, List<double[]> geometry, String wikipedia) throws SQLException {
+    private static void nomInsert(long place_id, double importance, int rank_search, long osm_id, char osm_type, String class_, String type, String name, int admin_level, String extratags_wikidata, String extratags_wikipedia, List<double[]> geometry, String wikipedia) throws SQLException {
         String fakeGeometry = "'0101000020E6100000655C27E4398D3040016DAB5967CE4D40'";
         String sql = String.format("INSERT INTO placex (place_id, parent_place_id, linked_place_id, importance, indexed_date, geometry_sector, rank_address, rank_search, partition, indexed_status, osm_id, osm_type, class, type, name, admin_level, address, extratags, geometry, wikipedia, country_code, housenumber, postcode, centroid) VALUES (%s, NULL, NULL, %s, NULL, NULL, NULL, %s, NULL, NULL, %s, '%s', '%s', '%s', '\"name\"=>\"%s\"', %s, NULL, '\"wikidata\"=>\"%s\", \"wikipedia\"=>\"%s\"', %s, '%s', NULL, NULL, NULL, NULL)", place_id, importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags_wikidata, extratags_wikipedia, fakeGeometry, wikipedia);
 

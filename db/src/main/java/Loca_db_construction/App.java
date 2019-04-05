@@ -2,7 +2,20 @@
 /*
  * For creating the loca db. Source is an existing nominatim db.
  *
- * Post: Loca db with geo-objects.
+ * Pre:
+ * Nom-db, owned by 'postgres', pass='pass'.
+ * Nom-db  constraints:
+ * - 0 <= place_id
+ * - 0 <= importance <= 1
+ * - 2 <= rank_search <= 30
+ * - 0 < osm_id
+ * - osm_type <- N/W/R
+ * - class_ One of those defined in key-conversion-table
+ * - 0 <= admin_level <= 15
+ * - geometry Postgis node/linestring/polygon/multi- (i.e all except geometrycollection)
+ *
+ * Post:
+ * Loca db with geo-objects.
  * - Geo-objects have popindex, increasing with popularity.
  * - May have same names + categories.
  */
@@ -128,7 +141,7 @@ public class App {
                 return new String[]{keys[index], values[index], adminLevels[index]};
             }
         }
-        throw new RuntimeException(String.format("Dead end: %s:%s:%s",
+        throw new RuntimeException(String.format("Not defined in key-conversion-table: %s : %s : %s",
                                                  Arrays.toString(keys),
                                                  Arrays.toString(values),
                                                  Arrays.toString(adminLevels)));
@@ -189,7 +202,7 @@ public class App {
      */
     private static Statement createLocaDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
-	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	Connection conn = DriverManager.getConnection(url, "postgres", "pass");
 	Statement st = conn.createStatement();
         st.execute("DROP DATABASE IF EXISTS loca");
 	st.execute("CREATE DATABASE loca");
@@ -217,7 +230,7 @@ public class App {
      */
     private static Statement connectToLocaDb() throws SQLException {
         String url = "jdbc:postgresql://localhost/loca";
-	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	Connection conn = DriverManager.getConnection(url, "postgres", "pass");
 	return conn.createStatement();
     }
 
@@ -227,7 +240,7 @@ public class App {
      */
     private static Statement connectToNomDb() throws SQLException {
 	String url = "jdbc:postgresql://localhost/nominatim";
-	Connection conn = DriverManager.getConnection(url, "martin", "pass");
+	Connection conn = DriverManager.getConnection(url, "postgres", "pass");
 	Statement st = conn.createStatement();
 	conn.setAutoCommit(false);
 	st.setFetchSize(DB_FETCH_SIZE);
