@@ -5,14 +5,15 @@
  * Pre:
  * Nom-db, owned by 'postgres', pass='pass'.
  * Nom-db  constraints:
- * - 0 <= place_id UNIQUE
+ * - 0 <= place_id UNIQUE, NOT NULL
  * - 0 <= importance <= 1
  * - 2 <= rank_search <= 30
- * - 0 < osm_id
- * - osm_type <- N/W/R
- * - class_ One of those defined in key-conversion-table
+ * - 0 < osm_id, NOT NULL
+ * - osm_type <- N/W/R, NOT NULL
+ * - class_ One of those defined in key-conversion-table, NOT NULL
+ * - type NOT NULL
  * - 0 <= admin_level <= 15
- * - geometry Postgis node/linestring/polygon/multi- (i.e any except geometrycollection)
+ * - geometry Postgis node/linestring/polygon/multi- (i.e any except geometrycollection), NOT NULL
  *
  * Post:
  * Loca db with geo-objects.

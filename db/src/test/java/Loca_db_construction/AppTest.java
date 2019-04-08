@@ -1,5 +1,5 @@
 /*
- * Test the process of transfer data from nom to loca db.
+ * Test the process of transfering data from nom to loca db.
  */
 package Loca_db_construction;
 
@@ -9,6 +9,7 @@ import static org.junit.Assert.*;
 import java.sql.*;
 import java.util.List;
 import java.util.ArrayList;
+import org.postgis.*;
 
 public class AppTest {
 
@@ -23,27 +24,51 @@ public class AppTest {
         assertEquals(0, locaSize());
     }
 
-    @Test
-    public void singleElement() throws SQLException {
-        double importance = 0;
-        int rank_search = 20;
+    @Test public void singleElement() throws SQLException {
+        Double importance = 0d;
+        Integer rank_search = 20;
         long osm_id = 27527229;
         char osm_type = 'N';
         String class_ = "place";
         String type = "suburb";
         String name = "Östermalm";
-        int admin_level = 15;
+        Integer admin_level = 15;
         String extratags_wikidata = "Q29024431";
         String extratags_wikipedia = "sv:Östermalm, Västerås";
-        List<double[]> geometry = null;
+        String geometry = anyGeometry();
         String wikipedia = "sv:Östermalm,_Västerås";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags_wikidata, extratags_wikipedia, geometry, wikipedia);
         App.fillLocaDb(nomTestDb, locaTestDb);
 
         ResultSet rs = locaElems();
         rs.next();
+        assertEquals(1, rs.getInt("popindex"));
         assertEquals("Östermalm", rs.getString("name"));
+        assertEquals("c", rs.getString("supercat"));
+        assertEquals("place", rs.getString("subcat"));
+        assertNotNull(getGeometry(rs));
+        assertEquals(0, rs.getDouble("area"), 0.00001);
+        assertEquals("node/27527229", rs.getString("osm_ids"));
         assertEquals(1, locaSize());
+    }
+
+    @Test public void nulls() throws SQLException {
+        Double importance = null;
+        Integer rank_search = null;
+        String name = null;
+        Integer admin_level = null;
+        String extratags_wikidata = null;
+        String extratags_wikipedia = null;
+        String wikipedia = null;
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        String geometry = anyGeometry();
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+    }
+
+    @Test public void locaOrder() throws SQLException {
     }
 
 // * Utils
@@ -62,21 +87,27 @@ public class AppTest {
      * Insert specified elems in nom test db. Other column than specified by parameters set to NULL.
      * place_id in nom-test-db is ignored -> defaults to unique value (because of SERIAL).
      */
-    private static void nomInsert(double importance, int rank_search, long osm_id, char osm_type, String class_, String type, String name, int admin_level, String extratags_wikidata, String extratags_wikipedia, List<double[]> geometry, String wikipedia) throws SQLException {
-        String fakeGeometry = "'0101000020E6100000655C27E4398D3040016DAB5967CE4D40'";
-        String sql = String.format("INSERT INTO placex (parent_place_id, linked_place_id, importance, indexed_date, geometry_sector, rank_address, rank_search, partition, indexed_status, osm_id, osm_type, class, type, name, admin_level, address, extratags, geometry, wikipedia, country_code, housenumber, postcode, centroid) VALUES (NULL, NULL, %s, NULL, NULL, NULL, %s, NULL, NULL, %s, '%s', '%s', '%s', '\"name\"=>\"%s\"', %s, NULL, '\"wikidata\"=>\"%s\", \"wikipedia\"=>\"%s\"', %s, '%s', NULL, NULL, NULL, NULL)", importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags_wikidata, extratags_wikipedia, fakeGeometry, wikipedia);
+    private static void nomInsert(Double importance, Integer rank_search, long osm_id, char osm_type, String class_, String type, String name, Integer admin_level, String extratags_wikidata, String extratags_wikipedia, String geometry, String wikipedia) throws SQLException {
+        String sql = String.format("INSERT INTO placex (parent_place_id, linked_place_id, importance, indexed_date, geometry_sector, rank_address, rank_search, partition, indexed_status, osm_id, osm_type, class, type, name, admin_level, address, extratags, geometry, wikipedia, country_code, housenumber, postcode, centroid) VALUES (NULL, NULL, %s, NULL, NULL, NULL, %s, NULL, NULL, %s, '%s', '%s', '%s', '\"name\"=>\"%s\"', %s, NULL, '\"wikidata\"=>\"%s\", \"wikipedia\"=>\"%s\"', '%s', '%s', NULL, NULL, NULL, NULL)", importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags_wikidata, extratags_wikipedia, geometry, wikipedia);
 
 // VALUES (103698, 103697, NULL, 0, '2019-03-14 18:52:31.995466', 112483440, 20, 20, 112, 0, 27527229, 'N', 'place', 'suburb', '\"name\"=>\"Östermalm\"', 15, NULL, '\"wikidata\"=>\"Q29024431\", \"wikipedia\"=>\"sv:Östermalm, Västerås\"', '0101000020E6100000655C27E4398D3040016DAB5967CE4D40', 'sv:Östermalm,_Västerås', 'se', NULL, '722 14', '0101000020E6100000655C27E4398D3040016DAB5967CE4D40')");
         nomTestDb.executeUpdate(sql);
     }
 
-    private static void nomInsert(double importance, int rank_search, long osm_id, char osm_type, String class_, String type, String name) throws SQLException {
-        int admin_level = 0;
+    private static void nomInsert(Double importance, Integer rank_search, long osm_id, char osm_type, String class_, String type, String name, Integer admin_level) throws SQLException {
         String extratags_wikidata = "";
         String extratags_wikipedia = "";
-        List<double[]> geometry = null;
+        String geometry = anyGeometry();
         String wikipedia = "";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags_wikidata, extratags_wikipedia, geometry, wikipedia);
+    }
+
+    private static PGgeometry getGeometry(ResultSet rs) throws SQLException {
+        return (PGgeometry)rs.getObject("geometry");
+    }
+
+    private static String anyGeometry() {
+        return "SRID=4326;POINT(0 0)";
     }
 
 // * Before each test

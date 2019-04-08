@@ -50,7 +50,7 @@ $$ language sql;
  */
 drop function if exists toImportance;
 create function toImportance(double precision, smallint) returns double precision as $$
-       select coalesce($1, 0.75-($2*1.0/40));
+       select coalesce($1, coalesce(0.75-($2*1.0/40), 0));
 $$ language sql;
 
 /**
@@ -126,7 +126,7 @@ select
        array_agg(toImportance(importance, rank_search)) over same_wikipedia
     as importances
 from placex
-where name->'name' != '' --TODO?
+where name->'name' is not null and name->'name' != '' --TODO?
 window same_id as (
        partition by osm_type, osm_id
        order by toImportance(importance, rank_search) desc, place_id
