@@ -126,7 +126,7 @@ select
        array_agg(toImportance(importance, rank_search)) over same_wikipedia
     as importances
 from placex
-where name->'name' is not null and name->'name' != '' --TODO?
+where name is not null and name->'name' is not null and name->'name' != ''
 window same_id as (
        partition by osm_type, osm_id
        order by toImportance(importance, rank_search) desc, place_id
@@ -225,7 +225,7 @@ select
     name,
     array_to_string(classes, ',') as classes,
     array_to_string(types, ',') as types,
-    array_to_string(admin_levels, ',') as admin_levels,
+    array_to_string(array_replace(admin_levels, null, -1::smallint), ',') as admin_levels,
     geometry,
     array_to_string(ids, ',') as ids
 from aux4
