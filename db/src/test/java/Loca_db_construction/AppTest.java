@@ -18,6 +18,8 @@ public class AppTest {
 
 // * Tests
 
+// ** Basic tests (null, order..)
+
     @Test
     public void emptyNomDb() throws SQLException {
         App.fillLocaDb(nomTestDb, locaTestDb);
@@ -34,7 +36,7 @@ public class AppTest {
         String type = "suburb";
         String name = name("Östermalm");
         Integer admin_level = 15;
-        String extratags = extratags("Q29024431", "sv:Östermalm, Västerås");
+        String extratags = extratags("Q29024431");
         String geometry = anyGeometry();
         String wikipedia = "sv:Östermalm,_Västerås";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags, geometry, wikipedia);
@@ -131,7 +133,138 @@ public class AppTest {
         rs.close();
     }
 
-    @Test public void locaOrder() throws SQLException {
+    @Test
+    public void locaOrder() throws SQLException {
+        Double importance = 1d;
+        Integer rank_search = null;
+        String name = name("mid");
+        Integer admin_level = null;
+        long osm_id = 50;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 0d; //lowest
+        rank_search = 2; //highest
+        name = name("last");
+        osm_id = 100;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 1d; //highest
+        rank_search = 30; //lowest
+        name = name("first");
+        osm_id = 0;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(3, locaSize());
+
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("first", rs.getString("name"));
+        rs.next();
+        assertEquals("mid", rs.getString("name"));
+        rs.next();
+        assertEquals("last", rs.getString("name"));
+        rs.close();
+    }
+
+// ** Multiple entires, same elem -tests
+
+    @Test
+    public void sameOsm() throws SQLException {
+        Double importance = null;
+        Integer rank_search = null;
+        String name = name("1N");
+        Integer admin_level = null;
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        name = name("1W");
+        osm_id = 1;
+        osm_type = 'W';
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        name = name("2N");
+        osm_id = 2;
+        osm_type = 'N';
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        name = name("2W");
+        osm_id = 2;
+        osm_type = 'W';
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        name = name("1N duplicate");
+        osm_id = 1;
+        osm_type = 'N';
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(4, locaSize());
+    }
+
+    @Test
+    public void sameWikidata() throws SQLException {
+        Double importance = null;
+        Integer rank_search = null;
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        String name = name("1");
+        Integer admin_level = null;
+        String extratags = extratags("1");
+        String geometry = nodeAt(0,0);
+        String wikipedia = "1";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags, geometry, wikipedia);
+
+        osm_id = 2;
+        name = name("2");
+        extratags = extratags("1");
+        wikipedia = "2";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags, geometry, wikipedia);
+
+        osm_id = 3;
+        name = name("3");
+        extratags = extratags("3");
+        wikipedia = "1";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags, geometry, wikipedia);
+
+        importance = 1d;
+        osm_id = 4;
+        name = name("4");
+        extratags = extratags("1");
+        wikipedia = "1";
+        geometry = nodeAt(1,1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags, geometry, wikipedia);
+
+        importance = 0.9;
+        osm_id = 5;
+        name = name("5");
+        extratags = extratags("5");
+        wikipedia = "5";
+        geometry = nodeAt(0,0);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, extratags, geometry, wikipedia);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(2, locaSize());
+
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("4", rs.getString("name"));
+        assertEquals(1, rs.getLong("popindex"));
+        assertEquals(1, getGeometry(rs).getFirstPoint().x, 0.00001);
+        assertEquals(1, getGeometry(rs).getFirstPoint().y, 0.00001);
+    }
+
+    @Test
+    public void pickGeometry() throws SQLException {
+
     }
 
 // * Utils
@@ -158,7 +291,6 @@ public class AppTest {
     private static void nomInsert(Double importance, Integer rank_search, long osm_id, char osm_type, String class_, String type, String name, Integer admin_level, String extratags, String geometry, String wikipedia) throws SQLException {
         String sql = String.format("INSERT INTO placex (parent_place_id, linked_place_id, importance, indexed_date, geometry_sector, rank_address, rank_search, partition, indexed_status, osm_id, osm_type, class, type, name, admin_level, address, extratags, geometry, wikipedia, country_code, housenumber, postcode, centroid) VALUES (NULL, NULL, %s, NULL, NULL, NULL, %s, NULL, NULL, %s, %s, %s, %s, %s, %s, NULL, %s, %s, %s, NULL, NULL, NULL, NULL)", importance, rank_search, osm_id, quote(osm_type+""), quote(class_), quote(type), quote(name), admin_level, quote(extratags), quote(geometry), quote(wikipedia));
 
-// VALUES (103698, 103697, NULL, 0, '2019-03-14 18:52:31.995466', 112483440, 20, 20, 112, 0, 27527229, 'N', 'place', 'suburb', '\"name\"=>\"Östermalm\"', 15, NULL, '\"wikidata\"=>\"Q29024431\", \"wikipedia\"=>\"sv:Östermalm, Västerås\"', '0101000020E6100000655C27E4398D3040016DAB5967CE4D40', 'sv:Östermalm,_Västerås', 'se', NULL, '722 14', '0101000020E6100000655C27E4398D3040016DAB5967CE4D40')");
         nomTestDb.executeUpdate(sql);
     }
 
@@ -182,18 +314,23 @@ public class AppTest {
     }
 
     /**
-     * @return extratags hstore with wikidata and wikipedia entries.
+     * @return extratags hstore with wikidata.
      */
-    public static String extratags(String wikidata, String wikipedia) {
-        return String.format("\"wikidata\"=>\"%s\", \"wikipedia\"=>\"%s\"", wikidata, wikipedia);
+    public static String extratags(String wikidata) {
+        return String.format("\"wikidata\"=>\"%s\"", wikidata);
     }
 
     private static String anyGeometry() {
         return "SRID=4326;POINT(0 0)";
     }
 
-    private static PGgeometry getGeometry(ResultSet rs) throws SQLException {
-        return (PGgeometry)rs.getObject("geometry");
+    private static String nodeAt(double lon, double lat) {
+        return String.format("SRID=4326;POINT(%s %s)", lon, lat);
+    }
+
+    private static Geometry getGeometry(ResultSet rs) throws SQLException {
+        PGgeometry pg = (PGgeometry)rs.getObject("geometry");
+        return (pg == null ? null : pg.getGeometry());
     }
 
 // * Before each test
