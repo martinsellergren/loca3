@@ -124,7 +124,7 @@ public class App {
             //System.out.format(".%s.%s = %s:%s:%s -> %s:%s\n", popindex, name, tag[0], tag[1], tag[2], supercat, subcat);
 
 	    String sql = String.format("INSERT INTO elems VALUES " +
-	        		       "(%s, $$%s$$, '%s', '%s', '%s', ST_AREA('%s'), '%s')",
+	        		       "(%s, $$%s$$, '%s', '%s', $$%s$$, ST_AREA('%s'), '%s')",
 	        		       popindex, name, supercat, subcat, shape, shape, osmIds);
 	    locaDb.executeUpdate(sql);
         }
@@ -163,10 +163,10 @@ public class App {
             return adminBoundaryRankToCategory(adminLevel);
 
         String[] cats = keyValueConversionTable.get(key + ":" + value);
-        if (cats != null)
-            return cats;
-        else
-            return keyConversionTable.get(key);
+        if (cats == null) cats = keyConversionTable.get(key);
+
+        cats[1] = cats[1].replace('_', ' ');
+        return cats;
     }
 
     /**
@@ -304,12 +304,12 @@ public class App {
 
         for (String entry : entries) {
             String[] blocks = entry.split(" ");
+            if (blocks.length != 2 && blocks.length != 3)
+                throw new RuntimeException("Bad key-conversion-table format");
 
             String key = blocks[0];
             String supercat = blocks[1];
-            String subcat = blocks.length == 2 ?
-                key :
-                entry.replaceFirst(".*'(.+)'.*", "$1");
+            String subcat = blocks.length == 2 ? key : blocks[2];
 
             table.put(key, new String[]{supercat, subcat});
         }
@@ -326,13 +326,15 @@ public class App {
 
         for (String entry :  entries) {
             String[] blocks = entry.split(" ");
+            if (blocks.length != 4)
+                throw new RuntimeException("Bad key-value-conversion-table format");
 
             String key = blocks[0];
             String value = blocks[1];
             String supercat = blocks[2];
-            String subcat = blocks.length == 3 ?
-                keyConvTable.get(key)[1] :
-                entry.replaceFirst(".*'(.+)'.*", "$1");
+            String subcat = blocks[3];
+            if (subcat.equals("1")) subcat = key;
+            else if (subcat.equals("2")) subcat = value;
 
             table.put(key + ":" + value, new String[]{supercat, subcat});
         }

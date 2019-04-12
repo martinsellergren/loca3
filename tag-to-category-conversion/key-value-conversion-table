@@ -1,24 +1,24 @@
-// key-value spec. Specifies super- and sub-category of some specific tags. If no sub-category specified: as defined in key-conversion-table. Specified categories overrides key-conversion-table. Order of no significance. Some data collected from nominatim:ClassTypes.php. Format: key value super-cat ['sub-cat']
-place country c 'country'
+// key-value spec. Specifies super- and sub-category of some specific tags. Specified categories overrides key-conversion-table. Order of no significance. Some data collected from nominatim:ClassTypes.php. Format: key value super-cat sub-cat(1(key)/2(value)/something_else)
+place country c 2
 place islet n 'island'
-place island n 'island'
-place archipelago n 'archipelago'
-place peninsula n 'peninsula'
-place field n 'field'
-place sea n 'sea'
-place woodland n 'woodland'
-waterway stream n
-waterway river n
-waterway riverbank n
-waterway waterfall n 'waterfall'
-waterway drystream n
-waterway wadi n
-waterway soakhole n 'soakhole'
-waterway brook n
-waterway lake n 'lake'
-waterway spring n 'spring'
-waterway coastline n 'coastline'
-waterway creek n
-amenity place_of_worship c 'place of worship'
-boundary administrative c 'SPECIAL IMPLEMENTATION'
-boundary national_park n 'national park'
+place island n 2
+place archipelago n 2
+place peninsula n 2
+place field n 2
+place sea n 2
+place woodland n 2
+waterway stream n 1
+waterway river n 1
+waterway riverbank n 1
+waterway waterfall n 2
+waterway drystream n 1
+waterway wadi n 1
+waterway soakhole n 2
+waterway brook n 1
+waterway lake n 2
+waterway spring n 2
+waterway coastline n 2
+waterway creek n 1
+amenity place_of_worship c 2
+boundary national_park n 2
+boundary administrative c SPECIAL_IMPLEMENTATION
