@@ -74,7 +74,7 @@ public class App {
         //Statement locaDb = connectToLocaDb();
 
         int MAX_NODES_IN_GEOMETRY = 100;
-        //simplifyGeometries(locaDb, MAX_NODES_IN_GEOMETRY);
+        simplifyGeometries(locaDb, MAX_NODES_IN_GEOMETRY);
 
 	List<double[]> area = new ArrayList<>();
         area.add(new double[]{6.4071253, 0.4696603});
@@ -199,6 +199,15 @@ public class App {
         StringBuilder sb = new StringBuilder();
         for (String x : xs) sb.append(x + "\n");
         return sb.toString();
+    }
+
+// * Simplify geometries
+
+    /**
+     * Simplify geometries so no geometry has more points than max.
+     */
+    public static void simplifyGeometries(Statement locaDb, int max) {
+        //todo
     }
 
 // * Create/ connect to db

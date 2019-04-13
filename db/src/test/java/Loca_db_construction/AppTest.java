@@ -351,15 +351,15 @@ public class AppTest {
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = null;
-        geometry = line(2,2,2,2);
+        geometry = line(2,2,22,22);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 0.5d;
-        geometry = line(3,3,3,3);
+        geometry = line(3,3,33,33);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 0.1;
-        geometry = line(4,4,4,4);
+        geometry = line(4,4,44,44);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
@@ -458,7 +458,7 @@ public class AppTest {
 
 // ** Test simplify geometries
 
-    //@Test
+    @Test
     public void simplifyGeometries() throws SQLException {
         Double importance = null;
         Integer rank_search = null;
@@ -467,13 +467,19 @@ public class AppTest {
         String class_ = "place";
         String type = "suburb";
         String name = name("1");
-        String geometry = geometryFromRealNomDb(1234).toString();
-        System.out.println(geometry);
         String wikidata = null;
         Integer admin_level = null;
         String wikipedia = null;
+
+        long place_id = 329195; //big polygon
+        // long place_id = 306124; //long linestring
+        // long placeid = 214330; //small linestring
+        String geometry = geometryFromRealNomDb(329195).toString();
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+
     }
+
 
 
 // * Utils
@@ -553,6 +559,7 @@ public class AppTest {
 	Statement st = conn.createStatement();
         String sql = String.format("select geometry from placex where place_id=%s", place_id);
         ResultSet rs = st.executeQuery(sql);
+        rs.next();
         Geometry geom = getGeometry(rs);
         rs.close();
         st.close();
