@@ -455,6 +455,27 @@ public class AppTest {
 
 // ** Test deduping
 
+
+// ** Test simplify geometries
+
+    //@Test
+    public void simplifyGeometries() throws SQLException {
+        Double importance = null;
+        Integer rank_search = null;
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        String name = name("1");
+        String geometry = geometryFromRealNomDb(1234).toString();
+        System.out.println(geometry);
+        String wikidata = null;
+        Integer admin_level = null;
+        String wikipedia = null;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+    }
+
+
 // * Utils
 
     private static int locaSize() throws SQLException {
@@ -524,6 +545,19 @@ public class AppTest {
     private static Geometry getGeometry(ResultSet rs) throws SQLException {
         PGgeometry pg = (PGgeometry)rs.getObject("geometry");
         return (pg == null ? null : pg.getGeometry());
+    }
+
+    private static Geometry geometryFromRealNomDb(long place_id) throws SQLException {
+	String url = "jdbc:postgresql://localhost/nominatim";
+	Connection conn = DriverManager.getConnection(url, "postgres", "pass");
+	Statement st = conn.createStatement();
+        String sql = String.format("select geometry from placex where place_id=%s", place_id);
+        ResultSet rs = st.executeQuery(sql);
+        Geometry geom = getGeometry(rs);
+        rs.close();
+        st.close();
+        conn.close();
+	return geom;
     }
 
 // * Before each test

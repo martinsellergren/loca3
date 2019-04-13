@@ -14,7 +14,9 @@ $$ language sql;
 
 
 
---------------------------------------------------------------------nom
+
+
+-- * nom
 
 select
     left(name->'name', 30),
@@ -237,7 +239,7 @@ select st_asGeoJson(st_simplify(geometry,0.0003, true)) FROM placex where place_
 
 select count(*) from placex where st_npoints(geometry) > 100;
 
-------------------------------------------------------------------loca
+-- * loca
 
 select
     string_agg(popindex || '', ', '),
@@ -280,7 +282,7 @@ from
 
 SELECT name->'name', octet_length(t.*::text) FROM placex as t order by 2 desc limit 10;
 
---------------------------------------------------------------other
+-- * other
 
 drop function if exists withUniqueId;
 create function withUniqueId(anyarray, text[]) returns anyarray as $$
