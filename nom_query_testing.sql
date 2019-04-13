@@ -1,9 +1,26 @@
+/**
+ * @param1 osm_type
+ * @param2 osm_id
+ */
+drop function if exists toWeb;
+create function toWeb(character(1), bigint) returns text as $$
+       select 'https://www.openstreetmap.org/' ||
+              case when $1='N' then 'node'
+                   when $1='W' then 'way'
+                   else 'relation'
+              end
+              || '/' || $2
+$$ language sql;
+
+
+
 --------------------------------------------------------------------nom
 
 select
     left(name->'name', 30),
-    place_id,
-    rank_search,
+    type,
+    class,
+    GeometryType(geometry),
     'https://www.openstreetmap.org/' ||
                                      case when osm_type='N' then 'node'
                                           when osm_type='W' then 'way'
@@ -13,6 +30,8 @@ select
     coalesce(importance, 0.75-(rank_search*1.0/40))
 from
     placex
+where
+    GeometryType(geometry) = 'linestring' and st_isring(geometry) = true
 order by
       coalesce(importance, 0.75-(rank_search*1.0/40)) desc;
 
@@ -209,6 +228,15 @@ select name->'name' as nameee
 from placex
 group by nameeeee;
 
+
+select st_npoints(st_simplify(geometry,0.05,true)), st_asGeoJson(st_simplify(geometry,0.05,true)) FROM placex where place_id=329195;
+
+select place_id from placex where geometrytype(geometry) = 'LINESTRING' order by st_npoints(geometry) desc limit 1;
+select st_npoints(st_simplify(geometry,0.0003, true)) FROM placex where place_id=306124;
+select st_asGeoJson(st_simplify(geometry,0.0003, true)) FROM placex where place_id=306124;
+
+select count(*) from placex where st_npoints(geometry) > 100;
+
 ------------------------------------------------------------------loca
 
 select
@@ -248,6 +276,9 @@ select
     GeometryType(ST_Intersection(geometry, 'SRID=4326;POLYGON((6.4071253 0.4696603,6.2251096 -0.1675413,6.7856924 -0.0137329,7.0137726 0.4669138,6.4071253 0.4696603))'))
 from
     placex;
+
+
+SELECT name->'name', octet_length(t.*::text) FROM placex as t order by 2 desc limit 10;
 
 --------------------------------------------------------------other
 

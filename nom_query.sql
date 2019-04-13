@@ -126,7 +126,7 @@ select
        array_agg(toImportance(importance, rank_search)) over same_wikipedia
     as importances
 from placex
-where name is not null and name->'name' is not null and name->'name' != ''
+where name is not null and name->'name' is not null and name->'name' != '' and st_isvalid(geometry) = true
 window same_id as (
        partition by osm_type, osm_id
        order by toImportance(importance, rank_search) desc, place_id
