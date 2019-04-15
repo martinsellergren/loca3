@@ -74,7 +74,7 @@ public class App {
         //Statement locaDb = connectToLocaDb();
 
         int MAX_NODES_IN_GEOMETRY = 100;
-        simplifyGeometries(locaDb, MAX_NODES_IN_GEOMETRY);
+        //simplifyGeometries(locaDb, MAX_NODES_IN_GEOMETRY);
 
 	List<double[]> area = new ArrayList<>();
         area.add(new double[]{6.4071253, 0.4696603});

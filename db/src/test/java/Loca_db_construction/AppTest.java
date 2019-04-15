@@ -453,12 +453,153 @@ public class AppTest {
         rs.close();
     }
 
+    @Test
+    public void keyValueConversion() throws SQLException {
+        Double importance = 1d;
+        Integer rank_search = null;
+        Integer admin_level = null;
+        String name = name("1");
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "waterway";
+        String type = "stream";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 0.9;
+        name = name("2");
+        osm_id = 2;
+        class_ = "amenity";
+        type = "place_of_worship";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 0.8;
+        name = name("3");
+        osm_id = 3;
+        class_ = "place";
+        type = "islet";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 0.7;
+        name = name("4");
+        osm_id = 4;
+        class_ = "boundary";
+        type = "national_park";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(4, locaSize());
+
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("1", rs.getString("name"));
+        assertEquals("n", rs.getString("supercat"));
+        assertEquals("waterway", rs.getString("subcat"));
+
+        rs.next();
+        assertEquals("2", rs.getString("name"));
+        assertEquals("c", rs.getString("supercat"));
+        assertEquals("place of worship", rs.getString("subcat"));
+
+        rs.next();
+        assertEquals("3", rs.getString("name"));
+        assertEquals("n", rs.getString("supercat"));
+        assertEquals("island", rs.getString("subcat"));
+
+        rs.next();
+        assertEquals("4", rs.getString("name"));
+        assertEquals("n", rs.getString("supercat"));
+        assertEquals("national park", rs.getString("subcat"));
+
+        rs.close();
+    }
+
+    @Test
+    public void adminBoundaryConversion() throws SQLException {
+        Double importance = 1d;
+        Integer rank_search = null;
+        String name = name("1");
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "boundary";
+        String type = "administrative";
+        Integer admin_level = null;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 0.9;
+        name = name("2");
+        osm_id = 2;
+        admin_level = 0;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 0.8;
+        name = name("3");
+        osm_id = 3;
+        admin_level = 1;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        importance = 0.7;
+        name = name("4");
+        osm_id = 4;
+        admin_level = 8;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(4, locaSize());
+
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("1", rs.getString("name"));
+        assertEquals("c", rs.getString("supercat"));
+        assertEquals("border", rs.getString("subcat"));
+
+        rs.next();
+        assertEquals("2", rs.getString("name"));
+        assertEquals("c", rs.getString("supercat"));
+        assertEquals("border", rs.getString("subcat"));
+
+        rs.next();
+        assertEquals("3", rs.getString("name"));
+        assertEquals("c", rs.getString("supercat"));
+        assertEquals("continent", rs.getString("subcat"));
+
+        rs.next();
+        assertEquals("4", rs.getString("name"));
+        assertEquals("c", rs.getString("supercat"));
+        assertEquals("city", rs.getString("subcat"));
+
+        rs.close();
+    }
+
+    @Test
+    public void pickTag() throws SQLException {
+        Double importance = 1d;
+        Integer rank_search = null;
+        String name = name("1");
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "highway";
+        String type = "xxx";
+        Integer admin_level = null;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        class_ = "waterway";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+        class_ = "landuse";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+
+
+
+    }
+
+
+
 // ** Test deduping
 
 
 // ** Test simplify geometries
 
-    @Test
+    //@Test
     public void simplifyGeometries() throws SQLException {
         Double importance = null;
         Integer rank_search = null;
