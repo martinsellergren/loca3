@@ -50,7 +50,7 @@ public class AppTest {
         assertEquals("place", rs.getString("subcat"));
         assertNotNull(getGeometry(rs));
         assertEquals(0, rs.getDouble("area"), 0.00001);
-        assertEquals("node/27527229", rs.getString("osm_ids"));
+        assertEquals("N27527229", rs.getString("osm_ids"));
         assertEquals(1, locaSize());
         rs.close();
     }
@@ -577,19 +577,41 @@ public class AppTest {
         String name = name("1");
         long osm_id = 1;
         char osm_type = 'N';
-        String class_ = "highway";
+        String class_ = "landuse";
         String type = "xxx";
         Integer admin_level = null;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
-
         class_ = "waterway";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
-
-        class_ = "landuse";
+        class_ = "highway";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
 
+        importance = 0.9;
+        name = name("2");
+        osm_id = 2;
+        class_ = "historic";
+        type = "xxx";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+        class_ = "waterway";
+        type = "waterfall";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+        class_ = "boundary";
+        type = "administrative";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
 
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(2, locaSize());
 
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("1", rs.getString("name"));
+        assertEquals("highway", rs.getString("subcat"));
+
+        rs.next();
+        assertEquals("2", rs.getString("name"));
+        assertEquals("waterfall", rs.getString("subcat"));
+
+        rs.close();
     }
 
 

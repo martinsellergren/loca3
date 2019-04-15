@@ -116,7 +116,6 @@ public class App {
             String[] tagKeys = rs.getString(3).split(",");
             String[] tagValues = rs.getString(4).split(",");
             String[] adminLevels = rs.getString(5).split(",");
-
             PGgeometry shape = (PGgeometry)rs.getObject(6);
             String osmIds = rs.getString(7);
 

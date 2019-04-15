@@ -61,7 +61,29 @@ $$ language sql;
  */
 drop function if exists toId;
 create function toId(character(1), bigint) returns text as $$
-       select $1 || $2;
+       select case when $1 = 'N' then 'node'
+                   when $1 = 'W' then 'way'
+                   else 'relation'
+              end || '/' || $2;
+$$ language sql;
+
+/**
+ * @param1 id (node/way/relation)/id
+ * @return Osm webaddress of element with specified id.
+ */
+drop function if exists toWeb;
+create function toWeb(text) returns text as $$
+       select 'https://www.openstreetmap.org/' || $1;
+$$ language sql;
+
+/**
+ * @param1 ids
+ * @return Osm webaddresses.
+ */
+drop function if exists toWebs;
+create function toWebs(text[]) returns text as $$
+       select string_agg(toWeb(id), ', ')
+       from unnest($1) as id;
 $$ language sql;
 
 
@@ -130,9 +152,9 @@ aux2 as (
 select
     importance,
     name,
-    classes,--withUniqueId(classes, ids) as classes,
-    types,--withUniqueId(types, ids) as types,
-    admin_levels,--withUniqueId(admin_levels, ids) as admin_levels,
+    withUniqueId(classes, ids) as classes,
+    withUniqueId(types, ids) as types,
+    withUniqueId(admin_levels, ids) as admin_levels,
     pickGeometry(geometries, importances) as geometry,
     ids[ array_position(geometries, pickGeometry(geometries, importances)) ] as id
 from
