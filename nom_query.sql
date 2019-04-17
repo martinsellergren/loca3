@@ -5,22 +5,6 @@ create extension if not exists unaccent;
 -- * FUNCTION DEFS
 
 /**
- * @param1 elems
- * @param2 ids
- * Each elem in elems has corresponding id in ids.
- * Returns elems with unique ids, ordered by id.
- */
-drop function if exists withUniqueId;
-create function withUniqueId(anyarray, text[]) returns anyarray as $$
-       with elems as (
-       select (array_agg(elem))[1] as elem, id
-       from unnest($1, $2) as t(elem, id)
-       group by id
-       order by id)
-       select array_agg(elem order by id) from elems;
-$$ language sql;
-
-/**
  * @param1 geometries
  * @param2 importances
  * Each geometry in geometries has corresponding importance in importances.
@@ -130,9 +114,9 @@ aux2 as (
 select
     importance,
     name,
-    classes,--withUniqueId(classes, ids) as classes,
-    types,--withUniqueId(types, ids) as types,
-    admin_levels,--withUniqueId(admin_levels, ids) as admin_levels,
+    classes,
+    types,
+    admin_levels,
     pickGeometry(geometries, importances) as geometry,
     ids[ array_position(geometries, pickGeometry(geometries, importances)) ] as id
 from
@@ -146,18 +130,17 @@ where
 
 /**
  * Add cluster-index. Clusters of proximate elements with same
- * name. Only dedupe linestrings (i.e not nodes, polygons or
- * multipolygons..).
+ * name. Only dedupe linestrings (i.e not nodes, polygons or multi-).
  *
  * NOTE: MAX_DEDUPE_DISTANCE (i.e max distance between two same-name
  * objects for merging them is specified in the ST_ClusterDBSCAN's
- * eps parameter.
+ * eps parameter. Unit in degrees so need a conversion-factor.
  */
 aux3 as (
 select *,
        case when GeometryType(geometry) != 'LINESTRING'
             then -1 * row_number() over (order by id)
-            else ST_ClusterDBSCAN(geometry, eps := 100, minpoints := 1)
+            else ST_ClusterDBSCAN(ST_Transform(geometry, 3857), eps := 50, minpoints := 1)
                  over same_name_and_geometryType
        end AS cid
 from aux2 as outerQuery

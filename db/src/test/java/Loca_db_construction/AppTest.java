@@ -37,7 +37,7 @@ public class AppTest {
         String name = name("Östermalm");
         Integer admin_level = 15;
         String wikidata = wikidata("Q29024431");
-        String geometry = anyGeometry();
+        String geometry = point();
         String wikipedia = "sv:Östermalm,_Västerås";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
         App.fillLocaDb(nomTestDb, locaTestDb);
@@ -219,7 +219,7 @@ public class AppTest {
         String name = name("1");
         Integer admin_level = null;
         String wikidata = wikidata("1");
-        String geometry = nodeAt(0,0);
+        String geometry = point(0,0);
         String wikipedia = "1";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
@@ -240,7 +240,7 @@ public class AppTest {
         name = name("4");
         wikidata = wikidata("1");
         wikipedia = "1";
-        geometry = nodeAt(1,1);
+        geometry = point(1,1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 0.9;
@@ -248,7 +248,7 @@ public class AppTest {
         name = name("5");
         wikidata = wikidata("5");
         wikipedia = "5";
-        geometry = nodeAt(0,0);
+        geometry = point(0,0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
@@ -275,7 +275,7 @@ public class AppTest {
         String name = name("1");
         Integer admin_level = null;
         String wikidata = wikidata("1");
-        String geometry = nodeAt(0,0);
+        String geometry = point(0,0);
         String wikipedia = "1";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
@@ -307,21 +307,21 @@ public class AppTest {
         String class_ = "place";
         String type = "suburb";
         String name = name("1");
-        String geometry = nodeAt(1,1);
+        String geometry = point(1,1);
         String wikidata = null;
         Integer admin_level = null;
         String wikipedia = null;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        geometry = nodeAt(2,2);
+        geometry = point(2,2);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 1d;
-        geometry = nodeAt(3,33);
+        geometry = point(3,33);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 0.1;
-        geometry = nodeAt(4,4);
+        geometry = point(4,4);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
@@ -344,22 +344,22 @@ public class AppTest {
         String class_ = "place";
         String type = "suburb";
         String name = name("1");
-        String geometry = nodeAt(1,1);
+        String geometry = point(1,1);
         String wikidata = null;
         Integer admin_level = null;
         String wikipedia = null;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = null;
-        geometry = line(2,2,22,22);
+        geometry = linestring(2,2,22,22);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 0.5d;
-        geometry = line(3,3,33,33);
+        geometry = linestring(3,3,33,33);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 0.1;
-        geometry = line(4,4,44,44);
+        geometry = linestring(4,4,44,44);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
@@ -618,6 +618,73 @@ public class AppTest {
 
 // ** Test deduping
 
+    @Test
+    public void dedupe_notLinestrings() throws SQLException {
+        Double importance = null;
+        Integer rank_search = null;
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        String name = name("1");
+        String geometry = point();
+        String wikidata = null;
+        Integer admin_level = null;
+        String wikipedia = null;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 2;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 3;
+        geometry = polygon(1,1,2,1,2,2,1,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(3, locaSize());
+    }
+
+    @Test
+    public void dedupe_singles() throws SQLException {
+        Double importance = 1.0;
+        Integer rank_search = null;
+        long osm_id = 1;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        String name = name("1");
+        String geometry = linestring(1,1,2,2);
+        String wikidata = null;
+        Integer admin_level = null;
+        String wikipedia = null;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 2;
+        geometry = linestring(2,2,3,3);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        importance = 0.9;
+        osm_id = 3;
+        geometry = linestring(50,50,51,51);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 4;
+        geometry = linestring(51.00001,51,52,52);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        importance = 0.8;
+        osm_id = 5;
+        geometry = linestring(-50,-50,-51,-51);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(3, locaSize());
+    }
+
+    @Test
+    public void dedupe_complex() throws SQLException {
+
+    }
 
 // ** Test simplify geometries
 
@@ -675,7 +742,7 @@ public class AppTest {
     private static void nomInsert(Double importance, Integer rank_search, long osm_id, char osm_type, String class_, String type, String name, Integer admin_level) throws SQLException {
         String wikidata = null;
         String wikipedia = null;
-        String geometry = anyGeometry();
+        String geometry = point();
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
     }
 
@@ -698,16 +765,25 @@ public class AppTest {
         return String.format("\"wikidata\"=>\"%s\"", wikidata);
     }
 
-    private static String anyGeometry() {
-        return "SRID=4326;POINT(0 0)";
-    }
-
-    private static String nodeAt(double lon, double lat) {
+    private static String point(double lon, double lat) {
         return String.format("SRID=4326;POINT(%s %s)", lon, lat);
     }
+    private static String point() {
+        return "SRID=4326;POINT(1 1)";
+    }
 
-    private static String line(double lon1, double lat1, double lon2, double lat2) {
+    private static String linestring(double lon1, double lat1, double lon2, double lat2) {
         return String.format("SRID=4326;LINESTRING(%s %s, %s %s)", lon1, lat1, lon2, lat2);
+    }
+    private static String linestring() {
+        return "SRID=4326;LINESTRING(1 1, 2 2)";
+    }
+
+    private static String polygon(double lon1, double lat1, double lon2, double lat2, double lon3, double lat3, double lon4, double lat4) {
+        return String.format("SRID=4326;POLYGON((%s %s, %s %s, %s %s, %s %s, %s %s))", lon1, lat1, lon2, lat2, lon3, lat3, lon4, lat4, lon1, lat1);
+    }
+    private static String polygon() {
+        return "SRID=4326;POLYGON((1 1, 2 1, 2 2, 1 2, 1 1))";
     }
 
 

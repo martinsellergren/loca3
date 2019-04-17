@@ -46,3 +46,13 @@ task fatJar(type: Jar) {
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
+
+// my tasks
+
+task b(type: GradleBuild) {
+     tasks = ['clean', 'installDist']
+}
+
+task t(type: GradleBuild) {
+     tasks = ['clean', 'installDist', 'test']
+}
