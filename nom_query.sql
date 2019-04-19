@@ -134,7 +134,8 @@ where
  *
  * NOTE: MAX_DEDUPE_DISTANCE (i.e max distance between two same-name
  * objects for merging them is specified in the ST_ClusterDBSCAN's
- * eps parameter. Unit in degrees so need a conversion-factor.
+ * eps parameter. ST_ClusterDBSCAN eps-parameter in input geometry unit
+ * (srid:4326=lon/lat) so transform geometry (3857-Pseudo-Mercator=meter).
  */
 aux3 as (
 select *,

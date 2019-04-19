@@ -645,44 +645,181 @@ public class AppTest {
     }
 
     @Test
-    public void dedupe_singles() throws SQLException {
-        Double importance = 1.0;
-        Integer rank_search = null;
+    public void dedupe_singles_IN_MERGE_DISTANCE() throws SQLException {
+        double D = 49; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
+        double importance = 1.0;
         long osm_id = 1;
+
+// *** 1. 2 horizontal end-start connected lines
+        String name = name("1");
+        String geometry = linestring(-1, 0, 0, 0);
         char osm_type = 'N';
         String class_ = "place";
         String type = "suburb";
-        String name = name("1");
-        String geometry = linestring(1,1,2,2);
+        Integer rank_search = null;
         String wikidata = null;
         Integer admin_level = null;
         String wikipedia = null;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        osm_id = 2;
-        geometry = linestring(2,2,3,3);
+        osm_id += 1;
+        geometry = linestring(0, 0, 1, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 0.9;
-        osm_id = 3;
-        geometry = linestring(50,50,51,51);
+// *** 2. 2 horizontal short lines with end-start space within merge
+        name = name("2");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(-0.000001, 0, 0, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        osm_id = 4;
-        geometry = linestring(51.00001,51,52,52);
+        osm_id += 1;
+        geometry = linestring(mToDegAtEquator(D), 0, 0.000001+mToDegAtEquator(D), 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 0.8;
-        osm_id = 5;
-        geometry = linestring(-50,-50,-51,-51);
+// *** 3. 2 horizontal long lines with end-start space within merge
+        name = name("3");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(-3, 0, 0, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
+        osm_id += 1;
+        geometry = linestring(mToDegAtEquator(D), 0, 3, 0);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+// *** 4. 2 ortogonal end-start connected lines
+        name = name("4");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(-1, 0, 0, 0);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id += 1;
+        geometry = linestring(0, 0, 0, 1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+// *** 5. 2 ortogonal mid-start connected lines
+        name = name("5");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(-1, 0, 1, 0);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id += 1;
+        geometry = linestring(0, 0, 0, 1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+// *** 6. 2 ortogonal lines with mid-start space within merge
+        name = name("6");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(0, -1, 0, 1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id += 1;
+        geometry = linestring(mToDegAtEquator(D), 0, 1, 0);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+
+// *** 7. 2 ortogonal lines with mid-end space within merge
+        name = name("7");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(0, -1, 0, 1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id += 1;
+        geometry = linestring(1, 0, mToDegAtEquator(D), 0);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+// *** 8. 2 ortogonal lines connected mid-mid (a cross)
+        name = name("8");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(-1, -1, 1, 1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id += 1;
+        geometry = linestring(-1, 1, 1, -1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+// *** 9. 2 equal lines
+        name = name("9");
+        importance -= 0.01;
+        osm_id += 1;
+        geometry = linestring(0, 0, 1, 1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id += 1;
+        geometry = linestring(1, 1, 0, 0);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+// *** 10. 3 horizontal end-start connected lines
+
+// *** 11. 2 horizontal end-start connected lines, 1 ortogonal within merge distance
+
+// *** Assertions
         App.fillLocaDb(nomTestDb, locaTestDb);
-        assertEquals(3, locaSize());
+        assertEquals(9, locaSize());
+
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("1", rs.getString("name"));
+        MultiLineString lines = (MultiLineString)getGeometry(rs);
+        assertEquals(2, lines.numGeoms());
+        assertEquals(4, lines.numPoints());
+
+        rs.next();
+        assertEquals("2", rs.getString("name"));
+        lines = (MultiLineString)getGeometry(rs);
+        assertEquals(2, lines.numGeoms());
+
+        rs.next();
+        assertEquals("3", rs.getString("name"));
+        lines = (MultiLineString)getGeometry(rs);
+        assertEquals(2, lines.numGeoms());
+
+        rs.next();
+        assertEquals("4", rs.getString("name"));
+        lines = (MultiLineString)getGeometry(rs);
+        assertEquals(2, lines.numGeoms());
+
+        rs.next();
+        assertEquals("5", rs.getString("name"));
+        lines = (MultiLineString)getGeometry(rs);
+        assertEquals(3, lines.numGeoms());
+
+        rs.next();
+        assertEquals("6", rs.getString("name"));
+        lines = (MultiLineString)getGeometry(rs);
+        assertEquals(2, lines.numGeoms());
+
+        rs.next();
+        assertEquals("7", rs.getString("name"));
+        lines = (MultiLineString)getGeometry(rs);
+        assertEquals(2, lines.numGeoms());
+
+        rs.next();
+        assertEquals("8", rs.getString("name"));
+        lines = (MultiLineString)getGeometry(rs);
+        //System.out.println(toGeoJson(lines));
+
+        rs.next();
+        assertEquals("9", rs.getString("name"));
+        LineString line = (LineString)getGeometry(rs);
+        assertEquals(2, line.numPoints());
+
+        rs.close();
     }
 
     @Test
     public void dedupe_complex() throws SQLException {
+
+    }
+
+    @Test
+    public void dedupe_extreme_north_south() throws SQLException {
 
     }
 
@@ -804,6 +941,20 @@ public class AppTest {
         st.close();
         conn.close();
 	return geom;
+    }
+
+    private static double mToDegAtEquator(double m) {
+        return m / 111319.458;
+    }
+
+    private static String toGeoJson(Geometry geom) throws SQLException {
+        String sql = String.format("select ST_AsGeoJSON(ST_GeomFromText('%s'))", geom.toString());
+        System.out.println(sql);
+        ResultSet rs = nomTestDb.executeQuery(sql);
+        rs.next();
+        String geoJ = rs.getString(1);
+        rs.close();
+        return geoJ;
     }
 
 // * Before each test
