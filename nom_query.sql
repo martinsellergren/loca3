@@ -88,7 +88,7 @@ select
        array_agg(toImportance(importance, rank_search)) over same_wikipedia
     as importances
 from placex
-where name is not null and name->'name' is not null and name->'name' != '' and st_isvalid(geometry) = true
+where name is not null and name->'name' is not null and name->'name' != '' and st_isvalid(geometry)
 window same_id as (
        partition by osm_type, osm_id
        order by toImportance(importance, rank_search) desc, place_id
@@ -144,7 +144,7 @@ select *,
             else ST_ClusterDBSCAN(ST_Transform(geometry, 3857), eps := 50, minpoints := 1)
                  over same_name_and_geometryType
        end AS cid
-from aux2 as outerQuery
+from aux2
 window same_name_and_geometryType as (
        partition by unaccent(name), GeometryType(geometry))),
 
@@ -175,15 +175,16 @@ select
 from aux3
 window same_cluster as (
        partition by unaccent(name), cid
-       order by importance desc
+       order by importance desc, id
        range between unbounded preceding and unbounded following)),
+
 
 /**
  * Final fix: unnest data and add popindex.
  */
 aux5 as (
 select
-    row_number() over (order by importance desc) as popindex,
+    row_number() over (order by importance desc, ids) as popindex,
     name,
     array_to_string(classes, ',') as classes,
     array_to_string(types, ',') as types,
@@ -192,7 +193,7 @@ select
     array_to_string(ids, ',') as ids
 from aux4
 where index_in_cluster = 1
-order by importance desc)
+order by importance desc, ids)
 
 
 select *
