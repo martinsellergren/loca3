@@ -308,19 +308,23 @@ public class AppTest {
         String type = "suburb";
         String name = name("1");
         String geometry = point(1,1);
+        String wikipedia = "1";
         String wikidata = null;
         Integer admin_level = null;
-        String wikipedia = null;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
+        osm_id = 2;
+        wikipedia = "1";
         geometry = point(2,2);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 1d;
+        osm_id = 3;
         geometry = point(3,33);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         importance = 0.1;
+        osm_id = 4;
         geometry = point(4,4);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
@@ -331,6 +335,7 @@ public class AppTest {
         rs.next();
         assertEquals(3, getGeometry(rs).getFirstPoint().x, 0.0000001);
         assertEquals(33, getGeometry(rs).getFirstPoint().y, 0.0000001);
+        assertEquals("N3", rs.getString("osm_ids"));
 
         rs.close();
     }
@@ -874,8 +879,8 @@ public class AppTest {
     @Test
     public void dedupe_complex() throws SQLException {
 
-// **** Even merge
-        Double importance = 1.0;
+// **** 1. Even merge
+        Double importance = 0.9;
         Integer rank_search = null;
         long osm_id = 1;
         char osm_type = 'N';
@@ -896,28 +901,85 @@ public class AppTest {
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-// **** Uneven merge
-        importance = 0.9;
-        osm_id = 3;
-        name = name("3");
-        wikidata = wikidata("3");
-        wikipedia = "3";
+// **** 10. Uneven merge
+        importance = 0.8;
+        osm_id = 10;
+        name = name("10");
+        wikidata = wikidata("10");
+        wikipedia = "10";
+        class_ = "historic"; //low prio
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+        class_ = "highway"; //high prio
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 11;
+        name = name("10");
+        wikidata = wikidata("11");
+        wikipedia = "11";
+        class_ = "natural"; //low prio
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+
+// **** 100. Complex
+        importance = 0.5;
+        osm_id = 100;
+        name = name("100");
+        wikidata = wikidata("100");
+        wikipedia = "100";
+        class_ = "historic"; //low prio
+        geometry = linestring(1,1,2,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        osm_id = 4;
-        name = name("3");
-        wikidata = wikidata("4");
-        wikipedia = "4";
+        importance = null;
+        osm_id = 1010101010;
+        name = name("101");
+        class_ = "natural"; //low prio
+        wikidata = null;
+        wikipedia = "101";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+        osm_id = 101;
+        importance = 1.0;
+        name = name("100");
+        geometry = linestring(1,1,101,1);
+        wikipedia = "101";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
+        importance = 0.1;
+        osm_id = 102;
+        wikipedia = null;
+        name = name("100");
+        class_ = "highway"; //high prio
+        geometry = linestring(1,1,2,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+
+// **** Assertions
         App.fillLocaDb(nomTestDb, locaTestDb);
-        assertEquals(2, locaSize());
+        assertEquals(3, locaSize());
 
         ResultSet rs = locaElems();
         rs.next();
+        assertEquals("100", rs.getString("name"));
+        assertEquals("highway", rs.getString("subcat"));
+        assertEquals("N101,N100,N102", rs.getString("osm_ids"));
+        MultiLineString lines = (MultiLineString)getGeometry(rs);
+        assertEquals(2, lines.numGeoms());
+        assertEquals(4, lines.numPoints());
+        assertTrue(lines.length() > 100);
+
+        rs.next();
         assertEquals("1", rs.getString("name"));
+        assertEquals("N1,N2", rs.getString("osm_ids"));
         LineString line = (LineString)getGeometry(rs);
+        assertEquals(linestring(), line.toString());
+
+        rs.next();
+        assertEquals("10", rs.getString("name"));
+        assertEquals("highway", rs.getString("subcat"));
+        assertEquals("N10,N11", rs.getString("osm_ids"));
+        line = (LineString)getGeometry(rs);
         assertEquals(linestring(), line.toString());
 
         rs.close();

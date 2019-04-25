@@ -19,23 +19,22 @@ $$ language sql;
 -- * nom
 
 select
-    left(name->'name', 30),
-    type,
+    coalesce(importance, coalesce(0.75-(rank_search*1.0/40), 0)) as importance,
+    (osm_type::text || osm_id::text) as osm_id,
+    left(name->'name', 30) as name,
     class,
-    GeometryType(geometry),
+    type,
+    GeometryType(geometry) as geom,
+    extratags->'wikidata' as wikidata,
+    wikipedia,
     'https://www.openstreetmap.org/' ||
                                      case when osm_type='N' then 'node'
                                           when osm_type='W' then 'way'
                                           else 'relation'
                                      end
-                                     || '/' || osm_id,
-    coalesce(importance, 0.75-(rank_search*1.0/40))
-from
-    placex
-where
-    GeometryType(geometry) = 'linestring' and st_isring(geometry) = true
-order by
-      coalesce(importance, 0.75-(rank_search*1.0/40)) desc;
+                                     || '/' || osm_id as web
+from placex
+order by coalesce(importance, coalesce(0.75-(rank_search*1.0/40), 0)) desc;
 
 
 select

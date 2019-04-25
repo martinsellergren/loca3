@@ -278,6 +278,9 @@ public class App {
     private static ResultSet executeNomQuery(String query, Statement st) throws SQLException {
         st.execute("CREATE EXTENSION IF NOT EXISTS postgis");
         st.execute("CREATE EXTENSION IF NOT EXISTS unaccent");
+        st.execute("DROP AGGREGATE IF EXISTS array_concat_agg(anyarray)");
+        st.execute("CREATE AGGREGATE array_concat_agg(anyarray) (SFUNC = array_cat, STYPE = anyarray)");
+
         extractAndCreateFunctions(query, st);
         return extractAndExecuteMainQuery(query, st);
     }

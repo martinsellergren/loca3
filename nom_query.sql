@@ -1,6 +1,12 @@
 create extension if not exists postgis;
 create extension if not exists unaccent;
 
+DROP AGGREGATE IF EXISTS array_concat_agg(anyarray);
+CREATE AGGREGATE array_concat_agg(anyarray) (
+  SFUNC = array_cat,
+  STYPE = anyarray
+);
+
 
 -- * FUNCTION DEFS
 
@@ -126,6 +132,8 @@ where
     same_wikidata_index = 1 and
     same_wikipedia_index = 1),
 
+
+
 -- ** DEDUPE
 
 /**
@@ -167,22 +175,21 @@ select
     row_number() over same_cluster as index_in_cluster,
     (array_agg(importance) over same_cluster)[1] as importance,
     (array_agg(name) over same_cluster)[1] as name,
-    array_agg(classes) over same_cluster as classes,
-    array_agg(types) over same_cluster as types,
-    array_agg(admin_levels) over same_cluster as admin_levels,
+    array_concat_agg(classes) over same_cluster as classes,
+    array_concat_agg(types) over same_cluster as types,
+    array_concat_agg(admin_levels) over same_cluster as admin_levels,
     ST_Union(geometry) over same_cluster as geometry,
     array_agg(id) over same_cluster as ids
 from aux3
 window same_cluster as (
        partition by unaccent(name), cid
        order by importance desc, id
-       range between unbounded preceding and unbounded following)),
+       range between unbounded preceding and unbounded following))
 
 
 /**
  * Final fix: unnest data and add popindex.
  */
-aux5 as (
 select
     row_number() over (order by importance desc, ids) as popindex,
     name,
@@ -193,8 +200,4 @@ select
     array_to_string(ids, ',') as ids
 from aux4
 where index_in_cluster = 1
-order by importance desc, ids)
-
-
-select *
-from aux5;
+order by importance desc, ids
