@@ -356,3 +356,6 @@ limit 100;
 
 
 select ST_Transform(ST_GeomFromText('POINT(-181 -180)', 4326), 3857);
+
+select * from SPATIAL_REF_SYS where srtext ~ 'UNIT\["metre"';
+select  UNIT["metre"

@@ -652,7 +652,7 @@ public class AppTest {
 
     @Test
     public void dedupe_singles_OUT_MERGE_DISTANCE() throws SQLException {
-        double D = 51; //OUT_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
+        double D = 101; //OUT_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
         double importance = 1.0;
         long osm_id = 1;
         String name = name("1");
@@ -676,7 +676,7 @@ public class AppTest {
 
     @Test
     public void dedupe_singles_IN_MERGE_DISTANCE() throws SQLException {
-        double D = 49; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
+        double D = 99; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
         double importance = 1.0;
         long osm_id = 1;
 
@@ -1013,15 +1013,15 @@ public class AppTest {
 // *** Dedupe at different latitudes
 
     @Test
-    public void dedupe_extreme_north_south() throws SQLException {
-        double Din = 4; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
-        double Dout = 0; //OUT_MERGE_DISTANCE > MAX_DEDUPE_DISTANCE
+    public void dedupe_lat0() throws SQLException {
+        double lat = 0;
+        double Din = 99; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
+        double Dout = 101; //OUT_MERGE_DISTANCE > MAX_DEDUPE_DISTANCE
 
-        // north
         Double importance = 1.0;
         String name = name("north");
         long osm_id = 1;
-        String geometry = linestring(-1, 85, 0, 85);
+        String geometry = linestring(-1, lat, 0, lat);
         char osm_type = 'W';
         String class_ = "place";
         String type = "suburb";
@@ -1032,53 +1032,27 @@ public class AppTest {
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         osm_id = 2;
-        geometry = linestring(mToDegAt85(Din), 85, 1+mToDegAt85(Din), 85);
+        geometry = linestring(mToDegAtEquator(Din), lat, 1, lat);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-//         // south
-//         importance = 0.9;
-//         name = name("south");
-//         osm_id = 3;
-//         geometry = linestring(-1, -85, 0, -85);
-//         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
-
-//         osm_id = 4;
-//         geometry = linestring(mToDegAt85(Din), -85, 1+mToDegAt85(Din), -85);
-//         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
-
-//         // out
-//         importance = 0.8;
-//         osm_id = 5;
-//         geometry = linestring(mToDegAt85(Dout), -85, 1+mToDegAt85(Dout), -85);
-//         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+        osm_id = 3;
+        geometry = linestring(1+mToDegAtEquator(Dout), lat, 2, lat);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
-        assertEquals(1, locaSize());
-
-        // ResultSet rs = locaElems();
-        // rs.next();
-        // System.out.println(toGeoJson(getGeometry(rs)));
-        // rs.next();
-        // System.out.println(toGeoJson(getGeometry(rs)));
-
-        // MultiLineString line = (MultiLineString)getGeometry(rs);
-        // assertEquals("north", rs.getString("name"));
-        // rs.next();
-        // assertEquals("south", rs.getString("name"));
-        // rs.next();
-        // assertEquals("south", rs.getString("name"));
-        // rs.close();
+        assertEquals(2, locaSize());
     }
 
     @Test
     public void dedupe_lat30() throws SQLException {
-        double Din = 43; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
-        double Dout = 44; //OUT_MERGE_DISTANCE > MAX_DEDUPE_DISTANCE
+        double lat = 30;
+        double Din = 85; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
+        double Dout = 90; //OUT_MERGE_DISTANCE > MAX_DEDUPE_DISTANCE
 
         Double importance = 1.0;
         String name = name("north");
         long osm_id = 1;
-        String geometry = linestring(-1, 30, 0, 30);
+        String geometry = linestring(-1, lat, 0, lat);
         char osm_type = 'W';
         String class_ = "place";
         String type = "suburb";
@@ -1089,11 +1063,11 @@ public class AppTest {
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         osm_id = 2;
-        geometry = linestring(mToDegAt30(Din), 30, 1, 30);
+        geometry = linestring(mToDegAt30(Din), lat, 1, lat);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         osm_id = 3;
-        geometry = linestring(1+mToDegAt30(Dout), 30, 2, 30);
+        geometry = linestring(1+mToDegAt30(Dout), lat, 2, lat);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
@@ -1103,8 +1077,8 @@ public class AppTest {
     @Test
     public void dedupe_lat60() throws SQLException {
         double lat = 60;
-        double Din = 24; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
-        double Dout = 27; //OUT_MERGE_DISTANCE > MAX_DEDUPE_DISTANCE
+        double Din = 50; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
+        double Dout = 55; //OUT_MERGE_DISTANCE > MAX_DEDUPE_DISTANCE
 
         Double importance = 1.0;
         String name = name("north");
@@ -1125,6 +1099,37 @@ public class AppTest {
 
         osm_id = 3;
         geometry = linestring(1+mToDegAt60(Dout), lat, 2, lat);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(2, locaSize());
+    }
+
+    @Test
+    public void dedupe_lat85() throws SQLException {
+        double lat = 85;
+        double Din = 8; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
+        double Dout = 10; //OUT_MERGE_DISTANCE > MAX_DEDUPE_DISTANCE
+
+        Double importance = 1.0;
+        String name = name("north");
+        long osm_id = 1;
+        String geometry = linestring(-1, lat, 0, lat);
+        char osm_type = 'W';
+        String class_ = "place";
+        String type = "suburb";
+        Integer rank_search = null;
+        String wikidata = null;
+        Integer admin_level = null;
+        String wikipedia = null;
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 2;
+        geometry = linestring(mToDegAt85(Din), lat, 1, lat);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 3;
+        geometry = linestring(1+mToDegAt85(Dout), lat, 2, lat);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);

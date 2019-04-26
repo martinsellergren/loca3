@@ -144,12 +144,13 @@ where
  * objects for merging them is specified in the ST_ClusterDBSCAN's
  * eps parameter. ST_ClusterDBSCAN eps-parameter in input geometry unit
  * (srid:4326=lon/lat) so transform geometry (3857-Pseudo-Mercator=meter).
+ * Eps valid close to equator, distorted (decreases) towards poles.
  */
 aux3 as (
 select *,
        case when GeometryType(geometry) != 'LINESTRING'
             then -1 * row_number() over (order by id)
-            else ST_ClusterDBSCAN(ST_Transform(geometry, 3857), eps := 50, minpoints := 1)
+            else ST_ClusterDBSCAN(ST_Transform(geometry, 3857), eps := 100, minpoints := 1)
                  over same_name_and_geometryType
        end AS cid
 from aux2
