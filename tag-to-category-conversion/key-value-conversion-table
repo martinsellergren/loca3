@@ -1,4 +1,5 @@
 // key-value spec. Specifies super- and sub-category of some specific tags. Specified categories overrides key-conversion-table. (Key must be defined in key-conversion-table). Order of no significance. Some data collected from nominatim:ClassTypes.php. Format: key value super-cat sub-cat(1(key)/2(value)/something_else)
+place city c 2
 place country c 2
 place islet n island
 place island n 2

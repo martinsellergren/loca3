@@ -14,13 +14,17 @@
  * - type NOT NULL
  * - 0 <= admin_level <= 15
  * - geometry Postgis node/linestring/polygon/multi- (i.e any except geometrycollection), NOT NULL
+ * - All points in all geometries: -90 < point < 90
  *
  * Post:
  * Loca db with geo-objects.
  * - Geo-objects have popindex, increasing with popularity.
  * - May have same names + categories.
- * - Elems in nom-db with same osm_id&type, wikidata, wikipedia are merged into one elem.
+ * - Elems in nom-db with same osm_id&type, wikidata and/or wikipedia are merged into one elem.
  * - Proximate (see MAX_DEDUPE_DISTANCE in nom-query) linestring-elems with same name merged into one.
+ *
+ * - Geometry-type != GeometryCollection
+ * - Geometries are valid (st_isValid(geom) = true)
  */
 package Loca_db_construction;
 
