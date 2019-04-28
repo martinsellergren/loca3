@@ -40,7 +40,14 @@ $$ language sql;
  */
 drop function if exists toImportance;
 create function toImportance(double precision, smallint) returns double precision as $$
-       select coalesce($1, coalesce(0.75-($2*1.0/40), 0));
+       with q1 as (
+            select
+                0.75 as IMPORTANCE_FACTOR,
+                coalesce($1, 0) as importance1,
+                (29 - (coalesce($2, 30)-1)) / 29::double precision as importance2
+       )
+       select IMPORTANCE_FACTOR * importance1 + (1 - IMPORTANCE_FACTOR) * importance2
+       from q1;
 $$ language sql;
 
 /**

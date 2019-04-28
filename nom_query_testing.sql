@@ -15,7 +15,6 @@ $$ language sql;
 
 
 
-
 -- * nom
 
 select
@@ -239,6 +238,29 @@ select st_asGeoJson(st_simplify(geometry,0.0003, true)) FROM placex where place_
 select count(*) from placex where st_npoints(geometry) > 100;
 
 -- * loca
+
+drop function if exists toWeb;
+create function toWeb(text) returns text as $$
+       with aux as (
+            select
+                substring($1, 1, 1) as type,
+                substring($1, 2) as id)
+       select 'https://www.openstreetmap.org/' ||
+              case when type='N' then 'node'
+                   when type='W' then 'way'
+                   else 'relation'
+              end
+              || '/' || id
+       from aux
+$$ language sql;
+
+drop function if exists toWebs;
+create function toWebs(text) returns text as $$
+       select array_to_string(array_agg(toWeb(osm_id)), ',')
+       from unnest( regexp_split_to_array($1, ', ') ) as t(osm_id)
+$$ language sql;
+
+
 
 select
     string_agg(popindex || '', ', '),
