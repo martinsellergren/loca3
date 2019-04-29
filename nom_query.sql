@@ -14,7 +14,7 @@ CREATE AGGREGATE array_concat_agg(anyarray) (
  * @param1 geometries
  * @param2 importances
  * Each geometry in geometries has corresponding importance in importances.
- * Return most important geometry that isn't a node.
+ * Returns most important geometry that isn't a node.
  * If all geometries are nodes, return most important node.
  */
 drop function if exists pickGeometry;
@@ -40,14 +40,17 @@ $$ language sql;
  */
 drop function if exists toImportance;
 create function toImportance(double precision, smallint) returns double precision as $$
-       with q1 as (
-            select
-                0.7 as IMPORTANCE_FACTOR,
-                coalesce($1, 0) as importance1,
-                (30 - (coalesce($2, 30))) / 30::double precision as importance2
+       with vars as (
+       select
+              0.7 as IMPORTANCE_FACTOR,
+              $1 as importance1,
+              (30 - (coalesce($2, 30))) / 30::double precision as importance2
        )
-       select IMPORTANCE_FACTOR * importance1 + (1 - IMPORTANCE_FACTOR) * importance2
-       from q1;
+       select
+        case when importance1 is not null
+             then IMPORTANCE_FACTOR * importance1 + (1 - IMPORTANCE_FACTOR) * importance2
+             else importance2 end
+        from vars;
 $$ language sql;
 
 /**
@@ -81,11 +84,37 @@ create function testWikipedia(text, text) returns text as $$
        from vars
 $$ language sql;
 
+/**
+ * @param1 geometries
+ * @param2 importances. Ordered desc.
+ * geometry[i] has importance importances[i].
+ *
+ * Returns geometries except every linestring replaced with 'all linestrings collected into one'.
+ * Array-length preserved. Preserved order.
+ */
+drop function if exists mergeLinestrings;
+create function mergeLinestrings(geometry[], double precision[]) returns geometry[] as $$
+       with aux1 as (
+       select
+        importance,
+        case when GeometryType(geometry) = 'LINESTRING'
+             then (
+                  select st_union(geometry)
+                  from unnest($1) as geometry
+                  where GeometryType(geometry) = 'LINESTRING'
+             )
+             else geometry end
+             as geometry
+        from unnest($1, $2) as t(geometry, importance))
+
+        select array_agg(geometry order by importance) from aux1;
+$$ language sql;
+
 
 -- * QUERY
 
 /**
- * Just fetch needed stuff and minor fixes.
+ * Fetch needed stuff, filter and minor fixes.
  */
 with aux0 as (
 select
@@ -96,7 +125,7 @@ select
     geometry,
     osm_type,
     osm_id,
-    importance,
+    importance as nom_importance,
     rank_search,
     place_id,
     extratags,
@@ -113,7 +142,7 @@ where name is not null and name->'name' is not null and name->'name' != '' and s
 aux1 as (
 select
     case when wikipedia is not null
-         then toImportance(importance, rank_search)
+         then toImportance(nom_importance, rank_search)
          else toImportance(null, rank_search) end
          as importance,
     name,
@@ -140,22 +169,22 @@ select
        array_agg(toId(osm_type, osm_id)) over same_wikidata ||
        array_agg(toId(osm_type, osm_id)) over same_wikipedia
     as ids,
-    array_agg(toImportance(importance, rank_search)) over same_id ||
-       array_agg(toImportance(importance, rank_search)) over same_wikidata ||
-       array_agg(toImportance(importance, rank_search)) over same_wikipedia
+    array_agg(toImportance(nom_importance, rank_search)) over same_id ||
+       array_agg(toImportance(nom_importance, rank_search)) over same_wikidata ||
+       array_agg(toImportance(nom_importance, rank_search)) over same_wikipedia
     as importances
 from aux0
 window same_id as (
        partition by osm_type, osm_id
-       order by toImportance(importance, rank_search) desc, place_id
+       order by toImportance(nom_importance, rank_search) desc, place_id
        range between unbounded preceding and unbounded following),
 same_wikidata as (
        partition by coalesce(extratags->'wikidata', place_id::text)
-       order by toImportance(importance, rank_search) desc, place_id
+       order by toImportance(nom_importance, rank_search) desc, place_id
        range between unbounded preceding and unbounded following),
 same_wikipedia as (
        partition by coalesce(wikipedia, place_id::text)
-       order by toImportance(importance, rank_search) desc, place_id
+       order by toImportance(nom_importance, rank_search) desc, place_id
        range between unbounded preceding and unbounded following)),
 
 /**
@@ -188,7 +217,7 @@ where
 
 /**
  * Add cluster-index. Clusters of proximate elements with same
- * name. Only dedupe linestrings (i.e not nodes, polygons or multi-).
+ * name.
  *
  * NOTE: MAX_DEDUPE_DISTANCE (i.e max distance between two same-name
  * objects for merging them is specified in the ST_ClusterDBSCAN's
@@ -198,28 +227,25 @@ where
  */
 aux3 as (
 select *,
-       case when GeometryType(geometry) != 'LINESTRING'
-            then -1 * row_number() over (order by id)
-            else ST_ClusterDBSCAN(ST_Transform(geometry, 3857), eps := 100, minpoints := 1)
-                 over same_name_and_geometryType
-       end AS cid
+       ST_ClusterDBSCAN(ST_Transform(geometry, 3857), eps := 100, minpoints := 1) over same_name as cid
 from aux2
-window same_name_and_geometryType as (
-       partition by unaccent(name), GeometryType(geometry))),
+window same_name as (
+       partition by unaccent(name))),
 
--- select cid
--- from aux3
--- group by cid
--- having count(*) > 1;
-
--- select name, cid, toWeb(id)
--- from aux3
--- where GeometryType(geometry) = 'LINESTRING'
---  and name = 'Avenida das Naçoes Unidas';
+-- aux3 as (
+-- select *,
+--        case when GeometryType(geometry) != 'LINESTRING'
+--             then -1 * row_number() over (order by id)
+--             else ST_ClusterDBSCAN(ST_Transform(geometry, 3857), eps := 100, minpoints := 1)
+--                  over same_name_and_geometryType
+--        end AS cid
+-- from aux2
+-- window same_name_and_geometryType as (
+--        partition by unaccent(name), GeometryType(geometry))),
 
 /**
  * Aggregate data from same cluster. Importance and name from most
- * important elem. Geometries collected into a singel geometry.
+ * important elem.
  */
 aux4 as (
 select
@@ -229,7 +255,8 @@ select
     array_concat_agg(classes) over same_cluster as classes,
     array_concat_agg(types) over same_cluster as types,
     array_concat_agg(admin_levels) over same_cluster as admin_levels,
-    ST_Union(geometry) over same_cluster as geometry,
+    array_agg(geometry) over same_cluster as geometries,
+    array_agg(importance) over same_cluster as importances,
     array_agg(id) over same_cluster as ids
 from aux3
 window same_cluster as (
@@ -239,7 +266,8 @@ window same_cluster as (
 
 
 /**
- * Final fix: unnest data and add popindex.
+ * Geometries converted into a singel geometry.
+ * Unnest data and add popindex.
  */
 select
     row_number() over (order by importance desc, ids) as popindex,
@@ -247,7 +275,7 @@ select
     array_to_string(classes, ',') as classes,
     array_to_string(types, ',') as types,
     array_to_string(array_replace(admin_levels, null, -1::smallint), ',') as admin_levels,
-    geometry,
+    pickGeometry(mergeLinestrings(geometries, importances), importances) as geometry,
     array_to_string(ids, ',') as ids
 from aux4
 where index_in_cluster = 1

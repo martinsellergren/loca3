@@ -147,15 +147,15 @@ public class AppTest {
         String wikipedia = "mid";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = null;
-        rank_search = null;
+        importance = 0.0;
+        rank_search = 29;
         name = name("last");
         osm_id = 1;
         wikipedia = "last";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 0.00001;
-        rank_search = 30;
+        importance = null;
+        rank_search = 29;
         name = name("next to last");
         osm_id = 2;
         wikipedia = "next to last";
@@ -674,33 +674,87 @@ public class AppTest {
 
 
 // ** Test deduping
-// *** Not line-strings (no deduping)
+// *** Not line-strings
+
     @Test
-    public void dedupe_notLinestrings() throws SQLException {
-        Double importance = null;
-        Integer rank_search = null;
+    public void dedupe_differentGeometryTypes() throws SQLException {
         long osm_id = 1;
+
+// **** 1. Polygon wins
+        String name = name("1");
+        Integer rank_search = 1;
+        String geometry = point(1,1);
+        Double importance = null;
         char osm_type = 'N';
         String class_ = "place";
         String type = "suburb";
-        String name = name("1");
-        String geometry = point();
         String wikidata = null;
         Integer admin_level = null;
         String wikipedia = null;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        osm_id = 2;
+        rank_search = 2;
+        osm_id++;
+        geometry = linestring(2,2,1,1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        osm_id = 3;
+        rank_search = 4;
+        osm_id++;
+        geometry = linestring(3,3,2,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        rank_search = 3;
+        osm_id++;
+        geometry = linestring(3,3,2,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        rank_search = 5;
+        osm_id++;
         geometry = polygon(1,1,2,1,2,2,1,2);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
+// **** 2. Linestring wins
+        name = name("2");
+        rank_search = 1;
+        osm_id++;
+        geometry = point(1,1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        rank_search = 16;
+        osm_id++;
+        geometry = linestring(2,2,1,1);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        rank_search = 10;
+        osm_id++;
+        geometry = linestring(3,3,2,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        rank_search = 15;
+        osm_id++;
+        geometry = linestring(3,3,2,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        rank_search = 11;
+        osm_id++;
+        geometry = polygon(1,1,2,1,2,2,1,2);
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+// **** Assertions
         App.fillLocaDb(nomTestDb, locaTestDb);
-        assertEquals(3, locaSize());
+        assertEquals(2, locaSize());
+
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("POLYGON", getGeometry(rs).getTypeString());
+
+        rs.next();
+        assertEquals("MULTILINESTRING", getGeometry(rs).getTypeString());
+
+        rs.close();
     }
-// *** Dedupe simple objects
+
+// *** Dedupe simple linestrings
 
     @Test
     public void dedupe_singles_OUT_MERGE_DISTANCE() throws SQLException {
@@ -951,7 +1005,7 @@ public class AppTest {
         rs.close();
     }
 
-// *** Dedupe complex objects (multiple tags etc)
+// *** Dedupe complex linestrings (multiple tags etc)
 
     @Test
     public void dedupe_complex() throws SQLException {
@@ -1219,7 +1273,6 @@ public class AppTest {
 
 
     }
-
 
 
 // * Utils
