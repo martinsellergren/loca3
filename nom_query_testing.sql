@@ -256,8 +256,8 @@ $$ language sql;
 
 drop function if exists toWebs;
 create function toWebs(text) returns text as $$
-       select array_to_string(array_agg(toWeb(osm_id)), ',')
-       from unnest( regexp_split_to_array($1, ', ') ) as t(osm_id)
+       select array_to_string(array_agg(toWeb(osm_id)), ', ')
+       from unnest( regexp_split_to_array($1, ',') ) as t(osm_id)
 $$ language sql;
 
 

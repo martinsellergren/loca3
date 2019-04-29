@@ -42,8 +42,9 @@ drop function if exists toImportance;
 create function toImportance(double precision, smallint) returns double precision as $$
        with vars as (
        select
-              0.7 as IMPORTANCE_FACTOR,
-              $1 as importance1,
+              0.8   5 as IMPORTANCE_FACTOR,
+              coalesce($1, 0) as importance1, --todo
+              --$1 as importance1,
               (30 - (coalesce($2, 30))) / 30::double precision as importance2
        )
        select
