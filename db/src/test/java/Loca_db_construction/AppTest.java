@@ -75,18 +75,17 @@ public class AppTest {
         osm_id = 3;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
 
-        importance = null;
-        rank_search = 20;
+        rank_search = 29;
         name = name("4");
         osm_id = 4;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
 
-        importance = 0.5;
+        rank_search = 28;
         name = name("5");
         osm_id = 5;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
 
-        importance = 0.6;
+        rank_search = 27;
         name = name("6");
         osm_id = 6;
         class_ = "boundary";
@@ -94,7 +93,7 @@ public class AppTest {
         admin_level = null;
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
 
-        importance = 0.7;
+        rank_search = 26;
         name = name("7");
         osm_id = 7;
         class_ = "boundary";
@@ -134,31 +133,43 @@ public class AppTest {
     }
 
     @Test
-    public void locaOrder() throws SQLException {
-        Double importance = 1d;
-        Integer rank_search = null;
+    public void locaOrder1() throws SQLException {
+        Double importance = 1.0;
+        Integer rank_search = 30;
         String name = name("mid");
         Integer admin_level = null;
-        long osm_id = 50;
+        long osm_id = 0;
         char osm_type = 'N';
         String class_ = "place";
         String type = "suburb";
-        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+        String wikidata = null;
+        String geometry = point();
+        String wikipedia = "mid";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 0d; //lowest
-        rank_search = 2; //highest
+        importance = null;
+        rank_search = null;
         name = name("last");
-        osm_id = 100;
-        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+        osm_id = 1;
+        wikipedia = "last";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 1d; //highest
-        rank_search = 30; //lowest
+        importance = 0.00001;
+        rank_search = 30;
+        name = name("next to last");
+        osm_id = 2;
+        wikipedia = "next to last";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        importance = 1.0;
+        rank_search = 0;
         name = name("first");
-        osm_id = 0;
-        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level);
+        osm_id = 3;
+        wikipedia = "first";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
-        assertEquals(3, locaSize());
+        assertEquals(4, locaSize());
 
         ResultSet rs = locaElems();
         rs.next();
@@ -166,7 +177,48 @@ public class AppTest {
         rs.next();
         assertEquals("mid", rs.getString("name"));
         rs.next();
+        assertEquals("next to last", rs.getString("name"));
+        rs.next();
         assertEquals("last", rs.getString("name"));
+        rs.close();
+    }
+
+    @Test
+    public void locaOrder2() throws SQLException {
+        Double importance = 1.0;
+        Integer rank_search = 10;
+        long osm_id = 1;
+        String name = name("1");
+        String wikipedia = "1";
+        Integer admin_level = null;
+        char osm_type = 'N';
+        String class_ = "place";
+        String type = "suburb";
+        String wikidata = null;
+        String geometry = point();
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        osm_id = 2;
+        name = name("2");
+        wikipedia = "x";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        rank_search = 0;
+        osm_id = 3;
+        name = name("3");
+        wikipedia = "3";
+        nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
+
+        App.fillLocaDb(nomTestDb, locaTestDb);
+        assertEquals(3, locaSize());
+
+        ResultSet rs = locaElems();
+        rs.next();
+        assertEquals("3", rs.getString("name"));
+        rs.next();
+        assertEquals("1", rs.getString("name"));
+        rs.next();
+        assertEquals("2", rs.getString("name"));
         rs.close();
     }
 
@@ -235,7 +287,7 @@ public class AppTest {
         wikipedia = "1";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 1d;
+        rank_search = 0;
         osm_id = 4;
         name = name("4");
         wikidata = wikidata("1");
@@ -243,7 +295,7 @@ public class AppTest {
         geometry = point(1,1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 0.9;
+        rank_search = 1;
         osm_id = 5;
         name = name("5");
         wikidata = wikidata("5");
@@ -252,7 +304,7 @@ public class AppTest {
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
         App.fillLocaDb(nomTestDb, locaTestDb);
-        assertEquals(2, locaSize());
+        assertEquals(3, locaSize());
 
         ResultSet rs = locaElems();
         rs.next();
@@ -677,17 +729,17 @@ public class AppTest {
     @Test
     public void dedupe_singles_IN_MERGE_DISTANCE() throws SQLException {
         double D = 99; //IN_MERGE_DISTANCE < MAX_DEDUPE_DISTANCE
-        double importance = 1.0;
+        int rank_search = 0;
         long osm_id = 1;
 
 // **** 1. 2 horizontal end-start connected lines
-        importance -= 0.01;
         String name = name("1");
+        rank_search++;
         String geometry = linestring(-1, 0, 0, 0);
         char osm_type = 'N';
         String class_ = "place";
         String type = "suburb";
-        Integer rank_search = null;
+        Double importance = null;
         String wikidata = null;
         Integer admin_level = null;
         String wikipedia = null;
@@ -699,7 +751,7 @@ public class AppTest {
 
 // **** 2. 2 horizontal short lines with end-start space within merge
         name = name("2");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(-0.000001, 0, 0, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -710,7 +762,7 @@ public class AppTest {
 
 // **** 3. 2 horizontal long lines with end-start space within merge
         name = name("3");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(-3, 0, 0, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -721,7 +773,7 @@ public class AppTest {
 
 // **** 4. 2 ortogonal end-start connected lines
         name = name("4");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(-1, 0, 0, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -732,7 +784,7 @@ public class AppTest {
 
 // **** 5. 2 ortogonal mid-start connected lines
         name = name("5");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(-1, 0, 1, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -743,7 +795,7 @@ public class AppTest {
 
 // **** 6. 2 ortogonal lines with mid-start space within merge
         name = name("6");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(0, -1, 0, 1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -755,7 +807,7 @@ public class AppTest {
 
 // **** 7. 2 ortogonal lines with mid-end space within merge
         name = name("7");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(0, -1, 0, 1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -766,7 +818,7 @@ public class AppTest {
 
 // **** 8. 2 ortogonal lines connected mid-mid (a cross)
         name = name("8");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(-1, -1, 1, 1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -777,7 +829,7 @@ public class AppTest {
 
 // **** 9. 2 equal lines
         name = name("9");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(0, 0, 1, 1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -788,7 +840,7 @@ public class AppTest {
 
 // **** 10. 3 horizontal end-start connected lines
         name = name("10");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(0, 0, 1, 1);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -803,7 +855,7 @@ public class AppTest {
 
 // **** 11. 2 horizontal end-start connected lines, 1 ortogonal within merge distance
         name = name("11");
-        importance -= 0.01;
+        rank_search++;
         osm_id += 1;
         geometry = linestring(-2, 0, -1, 0);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
@@ -818,12 +870,12 @@ public class AppTest {
 
 // **** 0. One important, one not
         name = name("0");
-        importance = 0;
+        rank_search = 30;
         osm_id += 1;
         geometry = linestring();
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 1;
+        rank_search = 0;
         osm_id += 1;
         class_ = "place";
         type = "country";
@@ -905,8 +957,8 @@ public class AppTest {
     public void dedupe_complex() throws SQLException {
 
 // **** 1. Even merge
-        Double importance = 0.9;
-        Integer rank_search = null;
+        Integer rank_search = 1;
+        Double importance = null;
         long osm_id = 1;
         char osm_type = 'N';
         String class_ = "place";
@@ -927,7 +979,7 @@ public class AppTest {
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
 // **** 10. Uneven merge
-        importance = 0.8;
+        rank_search = 2;
         osm_id = 10;
         name = name("10");
         wikidata = wikidata("10");
@@ -946,7 +998,7 @@ public class AppTest {
 
 
 // **** 100. Complex
-        importance = 0.5;
+        rank_search = 15;
         osm_id = 100;
         name = name("100");
         wikidata = wikidata("100");
@@ -957,7 +1009,7 @@ public class AppTest {
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = null;
+        rank_search = null;
         osm_id = 1010101010;
         name = name("101");
         class_ = "natural"; //low prio
@@ -965,13 +1017,13 @@ public class AppTest {
         wikipedia = "101";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
         osm_id = 101;
-        importance = 1.0;
+        rank_search = 0;
         name = name("100");
         geometry = linestring(1,1,101,1);
         wikipedia = "101";
         nomInsert(importance, rank_search, osm_id, osm_type, class_, type, name, admin_level, wikidata, geometry, wikipedia);
 
-        importance = 0.1;
+        rank_search = 29;
         osm_id = 102;
         wikipedia = null;
         name = name("100");

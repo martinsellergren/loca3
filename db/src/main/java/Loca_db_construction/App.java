@@ -7,7 +7,7 @@
  * Nom-db  constraints:
  * - 0 <= place_id UNIQUE, NOT NULL
  * - 0 <= importance <= 1
- * - 2 <= rank_search <= 30
+ * - 0(perhaps 2) <= rank_search <= 30
  * - 0 < osm_id, NOT NULL
  * - osm_type <- N/W/R, NOT NULL
  * - class_ One of those defined in key-conversion-table, NOT NULL

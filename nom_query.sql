@@ -42,9 +42,9 @@ drop function if exists toImportance;
 create function toImportance(double precision, smallint) returns double precision as $$
        with q1 as (
             select
-                0.75 as IMPORTANCE_FACTOR,
+                0.7 as IMPORTANCE_FACTOR,
                 coalesce($1, 0) as importance1,
-                (29 - (coalesce($2, 30)-1)) / 29::double precision as importance2
+                (30 - (coalesce($2, 30))) / 30::double precision as importance2
        )
        select IMPORTANCE_FACTOR * importance1 + (1 - IMPORTANCE_FACTOR) * importance2
        from q1;
@@ -61,18 +61,62 @@ create function toId(character(1), bigint) returns text as $$
        select $1 || $2;
 $$ language sql;
 
+/**
+ * @param1 Name
+ * @param2 Wikipedia-entry
+ * @return param1 or NULL if Wikipedia-entry seems invalid.
+ */
+drop function if exists testWikipedia;
+create function testWikipedia(text, text) returns text as $$
+       with vars as (
+       select
+            $1 as name,
+            $2 as wiki
+       )
+       select
+            case when replace(lower(unaccent(wiki)), '_', ' ') like '%' || replace(lower(unaccent(name)), '_', ' ') || '%'
+                 then wiki
+                 else null
+            end
+       from vars
+$$ language sql;
+
 
 -- * QUERY
+
+/**
+ * Just fetch needed stuff and minor fixes.
+ */
+with aux0 as (
+select
+    name->'name' as name,
+    class,
+    type,
+    admin_level,
+    geometry,
+    osm_type,
+    osm_id,
+    importance,
+    rank_search,
+    place_id,
+    extratags,
+    testWikipedia(name->'name', wikipedia) as wikipedia
+from placex
+where name is not null and name->'name' is not null and name->'name' != '' and st_isvalid(geometry)
+),
 
 /**
  * Partitions with same osm_id, same wikidata and same wikipedia.
  * Complete elems with data from all elems in same partitions.
  * Most important elem in each partition has index 1.
  */
-with aux1 as (
+aux1 as (
 select
-    toImportance(importance, rank_search) as importance,
-    name->'name' as name,
+    case when wikipedia is not null
+         then toImportance(importance, rank_search)
+         else toImportance(null, rank_search) end
+         as importance,
+    name,
     row_number() over same_id as same_ids_index,
     row_number() over same_wikidata as same_wikidata_index,
     row_number() over same_wikipedia as same_wikipedia_index,
@@ -100,8 +144,7 @@ select
        array_agg(toImportance(importance, rank_search)) over same_wikidata ||
        array_agg(toImportance(importance, rank_search)) over same_wikipedia
     as importances
-from placex
-where name is not null and name->'name' is not null and name->'name' != '' and st_isvalid(geometry)
+from aux0
 window same_id as (
        partition by osm_type, osm_id
        order by toImportance(importance, rank_search) desc, place_id
@@ -208,4 +251,4 @@ select
     array_to_string(ids, ',') as ids
 from aux4
 where index_in_cluster = 1
-order by importance desc, ids
+order by importance desc, ids;

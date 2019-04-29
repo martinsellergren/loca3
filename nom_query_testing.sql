@@ -381,3 +381,5 @@ select ST_Transform(ST_GeomFromText('POINT(-181 -180)', 4326), 3857);
 
 select * from SPATIAL_REF_SYS where srtext ~ 'UNIT\["metre"';
 select  UNIT["metre"
+
+select name->'name', wikipedia, importance from placex where wikipedia is not null and testWikipedia(name->'name', wikipedia) is null and importance is not null order by importance desc;
